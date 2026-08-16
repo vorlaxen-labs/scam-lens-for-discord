@@ -12,7 +12,6 @@ cd scam-lens-discord-bot
 cp env/.env.example env/.env.development
 # Edit BOT_TOKEN and BOT_CLIENT_ID
 pnpm install
-pnpm approve-builds better-sqlite3 sharp
 pnpm dev
 ```
 

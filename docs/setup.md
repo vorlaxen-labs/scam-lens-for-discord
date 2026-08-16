@@ -29,7 +29,6 @@ cp env/.env.example env/.env.development
 
 ```bash
 pnpm install
-pnpm approve-builds better-sqlite3 sharp
 pnpm dev
 ```
 
