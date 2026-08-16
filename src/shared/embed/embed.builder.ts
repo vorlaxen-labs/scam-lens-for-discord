@@ -8,6 +8,7 @@ import type {
   DomainMatch,
   ImageMatch,
 } from '../types/index.js';
+import { formatActionMode } from '../utils/action-mode.util.js';
 
 const COLORS = {
   danger: 0xed4245,
@@ -35,19 +36,12 @@ function formatAction(action: string): string {
     ban_partial: 'Ban failed (partial)',
     timeout: 'User timed out',
     timeout_partial: 'Timeout failed (partial)',
+    'ban+timeout': 'User banned and timed out',
+    'ban+timeout_partial': 'User banned, timeout failed (partial)',
+    'ban_partial+timeout': 'Ban failed, user timed out (partial)',
     quarantine: 'User quarantined (timeout)',
   };
   return labels[action] ?? action;
-}
-
-function formatActionMode(mode: number): string {
-  const labels: Record<number, string> = {
-    0: '0 — Delete + ban',
-    1: '1 — Delete + log',
-    2: '2 — Log only',
-    3: '3 — Delete + timeout',
-  };
-  return labels[mode] ?? String(mode);
 }
 
 function formatMatch(type: DetectionType, match: string, distance?: number): string {
@@ -244,7 +238,9 @@ export class EmbedBuilder {
             '`1` Delete + log *(default)*',
             '`2` Log only *(new servers)*',
             '`3` Delete + timeout (high confidence)',
-            'Configure with `/config action`',
+            '`4` Delete + ban + timeout (high confidence)',
+            'Logging is always recorded. Modes combine delete, ban, and timeout.',
+            'Configure with `/config action` · timeout length via `/config timeout-duration`',
           ].join('\n'),
           inline: false,
         },

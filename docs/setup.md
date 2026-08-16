@@ -42,6 +42,18 @@ On first start the bot seeds `domains.txt` and `data/images/` into SQLite.
 4. Test: `/config test text:https://example-scam-domain.test`
 5. When ready: `/config action mode:1` (delete + log)
 
+Action modes combine capabilities:
+
+| Mode | On detection | High confidence (guild domain / strict pHash / dual) |
+|------|--------------|------------------------------------------------------|
+| `0` | Delete + log | Ban |
+| `1` | Delete + log | — |
+| `2` | Log only | — |
+| `3` | Delete + log | Timeout |
+| `4` | Delete + log | Ban + timeout |
+
+Use `/config timeout-duration` for high-confidence timeout length. Fuzzy pHash quarantine is separate (`/config quarantine`).
+
 ## Troubleshooting
 
 | Issue | Fix |

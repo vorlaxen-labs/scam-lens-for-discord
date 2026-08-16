@@ -29,9 +29,9 @@ Running **multiple bot instances** against one SQLite file is unsupported — ea
 2. Scan message text/embeds/components for blocked domains (suffix match via Set lookup per hostname label)
 3. Scan up to 3 image attachments via pHash (stream-limited fetch, first animated frame only)
 4. Compute trust score and moderation tier:
-   - **High confidence** (guild domain, strict pHash, dual) → ban or timeout per action mode
+   - **High confidence** (guild domain, strict pHash, dual) → ban and/or timeout per action mode (`0`–`4`)
    - **Fuzzy pHash only** → optional quarantine timeout when enabled
-   - **Global domain only** → delete + log, no auto-ban
+   - **Global domain only** → delete + log, no auto-ban/timeout
 5. Log with ULID operation ID (`SL-...`) to guild and/or central hub channel
 
 ## False-positive mitigation

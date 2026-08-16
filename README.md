@@ -31,10 +31,23 @@ Single process, multiple guilds. Running multiple bot instances against one SQLi
 
 - New servers start in **log-only mode (2)** until you configure actions
 - Production default action: **delete + log (1)**
+- Action modes **0–4** combine delete, ban, and timeout (logging is always recorded)
 - Auto-ban / high-confidence timeout only on: **guild-added domain**, **strict pHash**, or **dual signal**
 - Global seed domain alone: delete + log (no auto-ban) — reduces false positives from third-party lists
 - Fuzzy pHash alone: optional **quarantine** (timeout), not ban
 - Use `/add-allow-domain` to exempt trusted domains; `/config restore` to undo false positives
+
+### Action modes (`/config action`)
+
+| Mode | Combination | High-confidence moderation |
+|------|-------------|----------------------------|
+| `0` | Delete + log | Ban |
+| `1` | Delete + log | — *(recommended default)* |
+| `2` | Log only | — *(new servers)* |
+| `3` | Delete + log | Timeout |
+| `4` | Delete + log | Ban + timeout |
+
+High-confidence timeout length: `/config timeout-duration`. Fuzzy quarantine: `/config quarantine`.
 
 Blocklist provenance: [data/text/SOURCES.md](data/text/SOURCES.md)
 

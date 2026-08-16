@@ -11,6 +11,11 @@ import {
   buildMetadataSnapshot,
 } from './detection-log.helpers.js';
 import type { DomainMatch, GuildSettings, ImageMatch } from '../shared/types/index.js';
+import {
+  ActionFlag,
+  actionModeIncludes,
+  isLogOnlyMode,
+} from '../shared/utils/action-mode.util.js';
 import { logger } from '../infra/logger/index.js';
 
 const COMPROMISED_ACCOUNT_DM =
@@ -76,7 +81,7 @@ export function shouldQuarantineFuzzyImage(
   domainMatches: DomainMatch[],
   imageMatches: ImageMatch[],
 ): boolean {
-  if (!settings.quarantineFuzzyImages || settings.actionMode === 2) return false;
+  if (!settings.quarantineFuzzyImages || isLogOnlyMode(settings.actionMode)) return false;
   if (imageMatches.length === 0) return false;
   if (shouldAutoBan(domainMatches, imageMatches, settings.phashStrictThreshold)) return false;
 
@@ -85,6 +90,26 @@ export function shouldQuarantineFuzzyImage(
       match.hammingDistance > settings.phashStrictThreshold &&
       match.hammingDistance <= settings.phashThreshold,
   );
+}
+
+export function resolveModerationActionTaken(
+  shouldBan: boolean,
+  shouldTimeout: boolean,
+  banSucceeded: boolean | null,
+  timeoutSucceeded: boolean | null,
+): string {
+  if (shouldBan && shouldTimeout) {
+    if (banSucceeded && timeoutSucceeded) return 'ban+timeout';
+    if (banSucceeded) return 'ban+timeout_partial';
+    if (timeoutSucceeded) return 'ban_partial+timeout';
+    return 'ban_partial';
+  }
+
+  if (shouldBan) {
+    return banSucceeded ? 'ban' : 'ban_partial';
+  }
+
+  return timeoutSucceeded ? 'timeout' : 'timeout_partial';
 }
 
 export class ScamDetectionService {
@@ -141,26 +166,39 @@ export class ScamDetectionService {
     const actionResults: string[] = [];
     let actionTaken = 'log';
 
-    if (settings.actionMode !== 2) {
+    if (actionModeIncludes(settings.actionMode, ActionFlag.DELETE)) {
       const deleted = await this.tryDeleteMessage(message);
       actionResults.push(deleted ? 'delete:success' : 'delete:failed');
       if (deleted) actionTaken = 'delete';
     }
 
-    const shouldModerate =
-      autoBanEligible && (settings.actionMode === 0 || settings.actionMode === 3);
+    const shouldBan =
+      autoBanEligible && actionModeIncludes(settings.actionMode, ActionFlag.BAN);
+    const shouldTimeout =
+      autoBanEligible && actionModeIncludes(settings.actionMode, ActionFlag.TIMEOUT);
 
-    if (shouldModerate) {
+    if (shouldBan || shouldTimeout) {
       await this.sendWarningDm(message);
-      if (settings.actionMode === 0) {
-        const banned = await this.tryBanMember(message);
-        actionResults.push(banned ? 'ban:success' : 'ban:failed');
-        actionTaken = banned ? 'ban' : 'ban_partial';
-      } else if (settings.actionMode === 3) {
-        const timedOut = await this.tryTimeoutMember(message, settings.timeoutDurationSeconds);
-        actionResults.push(timedOut ? 'timeout:success' : 'timeout:failed');
-        actionTaken = timedOut ? 'timeout' : 'timeout_partial';
+
+      let banSucceeded: boolean | null = null;
+      let timeoutSucceeded: boolean | null = null;
+
+      if (shouldBan) {
+        banSucceeded = await this.tryBanMember(message);
+        actionResults.push(banSucceeded ? 'ban:success' : 'ban:failed');
       }
+
+      if (shouldTimeout) {
+        timeoutSucceeded = await this.tryTimeoutMember(message, settings.timeoutDurationSeconds);
+        actionResults.push(timeoutSucceeded ? 'timeout:success' : 'timeout:failed');
+      }
+
+      actionTaken = resolveModerationActionTaken(
+        shouldBan,
+        shouldTimeout,
+        banSucceeded,
+        timeoutSucceeded,
+      );
     } else if (quarantineEligible) {
       const quarantined = await this.tryTimeoutMember(
         message,

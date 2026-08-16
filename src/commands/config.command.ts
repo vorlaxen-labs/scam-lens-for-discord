@@ -3,6 +3,7 @@ import {
   SlashCommandBuilder,
 } from 'discord.js';
 import type { ActionMode, BotCommand, DomainMatch } from '../shared/types/index.js';
+import { formatActionMode } from '../shared/utils/action-mode.util.js';
 import { brandingConfig, scamConfig } from '../config/index.js';
 import { EmbedBuilder } from '../shared/embed/embed.builder.js';
 import { client } from '../infra/bot/client.js';
@@ -49,9 +50,22 @@ const ConfigCommand: BotCommand = {
         .addIntegerOption((option) =>
           option
             .setName('mode')
-            .setDescription('0=ban, 1=delete+log, 2=log only, 3=timeout')
+            .setDescription('0=ban, 1=delete+log, 2=log only, 3=timeout, 4=ban+timeout')
             .setMinValue(0)
-            .setMaxValue(3)
+            .setMaxValue(4)
+            .setRequired(true),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('timeout-duration')
+        .setDescription('Set high-confidence timeout duration (seconds)')
+        .addIntegerOption((option) =>
+          option
+            .setName('seconds')
+            .setDescription('Timeout duration in seconds (60-604800)')
+            .setMinValue(60)
+            .setMaxValue(604_800)
             .setRequired(true),
         ),
     )
@@ -152,7 +166,19 @@ const ConfigCommand: BotCommand = {
       settings.actionMode = mode;
       services.guildSettingsService.update(settings);
       await interaction.reply({
-        embeds: [EmbedBuilder.config('Action mode', `Mode ${mode}`)],
+        embeds: [EmbedBuilder.config('Action mode', formatActionMode(mode))],
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (subcommand === 'timeout-duration') {
+      const seconds = interaction.options.getInteger('seconds', true);
+      const previous = settings.timeoutDurationSeconds;
+      settings.timeoutDurationSeconds = seconds;
+      services.guildSettingsService.update(settings);
+      await interaction.reply({
+        embeds: [EmbedBuilder.config('Timeout duration', `${previous}s → ${seconds}s`)],
         ephemeral: true,
       });
       return;
@@ -311,7 +337,8 @@ const ConfigCommand: BotCommand = {
           [
             `Threshold: ${settings.phashThreshold}`,
             `Strict: ${settings.phashStrictThreshold}`,
-            `Action: ${settings.actionMode}`,
+            `Action: ${formatActionMode(settings.actionMode)}`,
+            `Timeout (high confidence): ${settings.timeoutDurationSeconds}s`,
             `Enabled: ${settings.enabled ? 'yes' : 'no'}`,
             `Skip bots: ${settings.skipBots ? 'yes' : 'no'}`,
             `Quarantine fuzzy: ${settings.quarantineFuzzyImages ? 'yes' : 'no'} (${settings.quarantineDurationSeconds}s)`,
