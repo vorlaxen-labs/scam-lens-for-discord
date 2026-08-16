@@ -13,7 +13,7 @@ Discord Gateway
       ▼
  Services (detection, blocklist, phash, logging)
       │
-      ├── In-memory L1 domain Set (~21k entries)
+      ├── In-memory L1 domain Set (~21k entries, O(labels) suffix lookup)
       └── SQLite (source of truth)
 ```
 
@@ -21,12 +21,21 @@ Discord Gateway
 
 Running **multiple bot instances** against one SQLite file is unsupported — each instance would diverge. Future scale-out requires **PostgreSQL** as shared storage.
 
-Redis (`REDIS_ENABLED=true`) is optional and reserved for multi-instance cooldown/cache; default deployment does not use it.
+**Redis** is on the roadmap for multi-instance cooldown/cache coordination; it is **not implemented** in the current codebase.
 
 ## Detection flow
 
-1. Deduplicate by `messageId` (60s TTL)
-2. Scan message text/embeds/components for blocked domains (suffix match)
-3. Scan up to 3 image attachments via pHash
-4. Apply action mode; auto-ban/timeout only when `shouldAutoBan()` returns true
-5. Log with ULID operation ID (`SL-...`) before/after delete
+1. Deduplicate by `messageId` (SQLite claim)
+2. Scan message text/embeds/components for blocked domains (suffix match via Set lookup per hostname label)
+3. Scan up to 3 image attachments via pHash (stream-limited fetch, first animated frame only)
+4. Compute trust score and moderation tier:
+   - **High confidence** (guild domain, strict pHash, dual) → ban or timeout per action mode
+   - **Fuzzy pHash only** → optional quarantine timeout when enabled
+   - **Global domain only** → delete + log, no auto-ban
+5. Log with ULID operation ID (`SL-...`) to guild and/or central hub channel
+
+## False-positive mitigation
+
+- Per-guild **allowlist** (`/add-allow-domain`)
+- **Restore** flow (`/config restore`) with optional operation ID audit
+- Global blocklist sourced from third-party seed — see [data/text/SOURCES.md](../data/text/SOURCES.md)

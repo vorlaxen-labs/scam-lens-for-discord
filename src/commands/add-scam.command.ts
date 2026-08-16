@@ -4,6 +4,7 @@ import { ScamHashRepository } from '../infra/database/repositories/scam-hash.rep
 import { refreshRuntimeCaches } from '../infra/bootstrap/create-services.js';
 import type { BotCommand } from '../shared/types/index.js';
 import { EmbedBuilder } from '../shared/embed/embed.builder.js';
+import { ImageFetchError } from '../shared/utils/image-fetch.util.js';
 import { client } from '../infra/bot/client.js';
 import { validateScamHash } from './get-hash.command.js';
 
@@ -43,7 +44,18 @@ const AddScamCommand: BotCommand = {
         return;
       }
       await interaction.deferReply({ ephemeral: true });
-      hash = await client.services!.phashService.computeHashFromUrl(image.url);
+      try {
+        hash = await client.services!.phashService.computeHashFromUrl(image.url);
+      } catch (error) {
+        const message =
+          error instanceof ImageFetchError
+            ? error.message
+            : error instanceof Error
+              ? error.message
+              : 'Failed to process image';
+        await interaction.editReply({ content: message });
+        return;
+      }
     } else if (!validateScamHash(hash!)) {
       await interaction.reply({ content: 'Invalid scam-hash format.', ephemeral: true });
       return;

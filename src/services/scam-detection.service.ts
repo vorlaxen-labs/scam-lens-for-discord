@@ -21,28 +21,77 @@ export interface MessageScanMatches {
   imageMatches: ImageMatch[];
 }
 
+export function computeTrustScore(
+  domainMatches: DomainMatch[],
+  imageMatches: ImageMatch[],
+  strictThreshold: number,
+): number {
+  const hasDomain = domainMatches.length > 0;
+  const hasImage = imageMatches.length > 0;
+  const bestImage = imageMatches[0];
+
+  if (hasDomain && hasImage) return 95;
+
+  const hasGuildDomain = domainMatches.some((match) => match.source === 'guild');
+  if (hasGuildDomain) return 90;
+
+  if (bestImage) {
+    if (bestImage.hammingDistance <= strictThreshold) {
+      if (bestImage.hammingDistance === 0) return 100;
+      return Math.max(85, 95 - bestImage.hammingDistance * 2);
+    }
+    return Math.max(40, 100 - bestImage.hammingDistance * 8);
+  }
+
+  if (hasDomain) return 60;
+
+  return 0;
+}
+
+export function shouldAutoBan(
+  domainMatches: DomainMatch[],
+  imageMatches: ImageMatch[],
+  strictThreshold: number,
+): boolean {
+  if (domainMatches.some((match) => match.source === 'guild')) return true;
+
+  if (
+    domainMatches.length > 0 &&
+    imageMatches.length > 0
+  ) {
+    return true;
+  }
+
+  if (
+    imageMatches.some((match) => match.hammingDistance <= strictThreshold)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+export function shouldQuarantineFuzzyImage(
+  settings: GuildSettings,
+  domainMatches: DomainMatch[],
+  imageMatches: ImageMatch[],
+): boolean {
+  if (!settings.quarantineFuzzyImages || settings.actionMode === 2) return false;
+  if (imageMatches.length === 0) return false;
+  if (shouldAutoBan(domainMatches, imageMatches, settings.phashStrictThreshold)) return false;
+
+  return imageMatches.some(
+    (match) =>
+      match.hammingDistance > settings.phashStrictThreshold &&
+      match.hammingDistance <= settings.phashThreshold,
+  );
+}
+
 export class ScamDetectionService {
   constructor(
     private readonly guildSettingsService: GuildSettingsService,
     private readonly detectionLogService: DetectionLogService,
   ) {}
-
-  shouldAutoBan(
-    settings: GuildSettings,
-    domainMatches: DomainMatch[],
-    imageMatches: ImageMatch[],
-  ): boolean {
-    if (domainMatches.length > 0) return true;
-
-    const strictMatch = imageMatches.some(
-      (match) => match.hammingDistance <= settings.phashStrictThreshold,
-    );
-    if (strictMatch) return true;
-
-    if (domainMatches.length > 0 && imageMatches.length > 0) return true;
-
-    return false;
-  }
 
   async handleDetection(message: Message, matches: MessageScanMatches): Promise<void> {
     if (!message.guildId || !message.guild) return;
@@ -56,6 +105,11 @@ export class ScamDetectionService {
     const detectionType = buildDetectionType(domainMatches.length > 0, imageMatches.length > 0);
     const matchedValue = buildMatchedValue(domainMatches, imageMatches);
     const hammingDistance = imageMatches[0]?.hammingDistance ?? null;
+    const trustScore = computeTrustScore(
+      domainMatches,
+      imageMatches,
+      settings.phashStrictThreshold,
+    );
     const metadataJson = buildMetadataSnapshot({
       id: message.id,
       channelId: message.channel.id,
@@ -67,11 +121,22 @@ export class ScamDetectionService {
       embeds: message.embeds.map((embed) => ({
         url: embed.url ?? null,
         title: embed.title ?? null,
+        imageUrl: embed.image?.url ?? null,
+        thumbnailUrl: embed.thumbnail?.url ?? null,
       })),
     });
 
     const operationId = this.detectionLogService.createOperationId();
-    const autoBanEligible = this.shouldAutoBan(settings, domainMatches, imageMatches);
+    const autoBanEligible = shouldAutoBan(
+      domainMatches,
+      imageMatches,
+      settings.phashStrictThreshold,
+    );
+    const quarantineEligible = shouldQuarantineFuzzyImage(
+      settings,
+      domainMatches,
+      imageMatches,
+    );
 
     const actionResults: string[] = [];
     let actionTaken = 'log';
@@ -96,6 +161,14 @@ export class ScamDetectionService {
         actionResults.push(timedOut ? 'timeout:success' : 'timeout:failed');
         actionTaken = timedOut ? 'timeout' : 'timeout_partial';
       }
+    } else if (quarantineEligible) {
+      const quarantined = await this.tryTimeoutMember(
+        message,
+        settings.quarantineDurationSeconds,
+        'Scam Lens: fuzzy scam image match — temporary quarantine',
+      );
+      actionResults.push(quarantined ? 'quarantine:success' : 'quarantine:failed');
+      if (quarantined) actionTaken = 'quarantine';
     }
 
     await this.detectionLogService.record({
@@ -116,6 +189,7 @@ export class ScamDetectionService {
       phashThreshold: settings.phashThreshold,
       phashStrictThreshold: settings.phashStrictThreshold,
       actionMode: settings.actionMode,
+      trustScore,
     });
   }
 
@@ -161,7 +235,11 @@ export class ScamDetectionService {
     }
   }
 
-  private async tryTimeoutMember(message: Message, durationSeconds: number): Promise<boolean> {
+  private async tryTimeoutMember(
+    message: Message,
+    durationSeconds: number,
+    reason = 'Scam Lens: high-confidence scam content detected',
+  ): Promise<boolean> {
     const member =
       message.member ?? (await message.guild!.members.fetch(message.author.id).catch(() => null));
     if (!member) return false;
@@ -173,7 +251,7 @@ export class ScamDetectionService {
     if (!member.moderatable) return false;
 
     try {
-      await member.timeout(durationSeconds * 1000, 'Scam Lens: high-confidence scam content detected');
+      await member.timeout(durationSeconds * 1000, reason);
       return true;
     } catch (error) {
       logger.warn({ error, userId: member.id }, 'Timeout failed');

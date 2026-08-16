@@ -12,6 +12,8 @@ interface GuildSettingsRow {
   skip_webhooks: number;
   skip_bots: number;
   timeout_duration_seconds: number;
+  quarantine_fuzzy_images?: number;
+  quarantine_duration_seconds?: number;
 }
 
 function mapRow(row: GuildSettingsRow): GuildSettings {
@@ -26,6 +28,8 @@ function mapRow(row: GuildSettingsRow): GuildSettings {
     skipWebhooks: row.skip_webhooks === 1,
     skipBots: row.skip_bots === 1,
     timeoutDurationSeconds: row.timeout_duration_seconds,
+    quarantineFuzzyImages: (row.quarantine_fuzzy_images ?? 1) === 1,
+    quarantineDurationSeconds: row.quarantine_duration_seconds ?? 900,
   };
 }
 
@@ -45,8 +49,8 @@ export class GuildSettingsRepository {
         `INSERT INTO guild_settings (
           guild_id, log_channel_id, phash_threshold, phash_strict_threshold,
           action_mode, enabled, exempt_role_ids, skip_webhooks, skip_bots,
-          timeout_duration_seconds
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          timeout_duration_seconds, quarantine_fuzzy_images, quarantine_duration_seconds
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         settings.guildId,
@@ -59,6 +63,8 @@ export class GuildSettingsRepository {
         settings.skipWebhooks ? 1 : 0,
         settings.skipBots ? 1 : 0,
         settings.timeoutDurationSeconds,
+        settings.quarantineFuzzyImages ? 1 : 0,
+        settings.quarantineDurationSeconds,
       );
     return settings;
   }
@@ -70,6 +76,7 @@ export class GuildSettingsRepository {
           log_channel_id = ?, phash_threshold = ?, phash_strict_threshold = ?,
           action_mode = ?, enabled = ?, exempt_role_ids = ?,
           skip_webhooks = ?, skip_bots = ?, timeout_duration_seconds = ?,
+          quarantine_fuzzy_images = ?, quarantine_duration_seconds = ?,
           updated_at = datetime('now')
         WHERE guild_id = ?`,
       )
@@ -83,6 +90,8 @@ export class GuildSettingsRepository {
         settings.skipWebhooks ? 1 : 0,
         settings.skipBots ? 1 : 0,
         settings.timeoutDurationSeconds,
+        settings.quarantineFuzzyImages ? 1 : 0,
+        settings.quarantineDurationSeconds,
         settings.guildId,
       );
     return settings;

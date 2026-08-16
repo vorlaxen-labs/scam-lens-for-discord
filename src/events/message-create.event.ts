@@ -1,7 +1,7 @@
 import { Events } from 'discord.js';
 import type { BotEvent } from '../shared/types/index.js';
 import { client } from '../infra/bot/client.js';
-import { IMAGE_FETCH_LIMITS } from '../shared/utils/image-fetch.util.js';
+import { collectMessageImageUrls } from '../shared/utils/message-image.util.js';
 import { logger } from '../infra/logger/index.js';
 
 const MessageCreateEvent: BotEvent<typeof Events.MessageCreate> = {
@@ -9,8 +9,6 @@ const MessageCreateEvent: BotEvent<typeof Events.MessageCreate> = {
   async execute(message) {
     const services = client.services;
     if (!services || !message.guildId || !message.guild) return;
-
-    if (message.author.bot) return;
 
     const settings = services.guildSettingsService.getOrCreate(message.guildId);
     if (!settings.enabled) return;
@@ -30,13 +28,11 @@ const MessageCreateEvent: BotEvent<typeof Events.MessageCreate> = {
     const domainMatches = services.domainBlocklistService.scanMessage(message, message.guildId);
 
     const imageMatches = [];
-    const imageAttachments = [...message.attachments.values()]
-      .filter((attachment) => attachment.contentType?.startsWith('image/'))
-      .slice(0, IMAGE_FETCH_LIMITS.maxImagesPerMessage);
+    const imageUrls = collectMessageImageUrls(message);
 
-    for (const attachment of imageAttachments) {
+    for (const imageUrl of imageUrls) {
       const match = await services.phashService.scanUrl(
-        attachment.url,
+        imageUrl,
         settings.phashThreshold,
         message.guildId,
       );

@@ -23,8 +23,7 @@ See [docs/setup.md](docs/setup.md) for Discord Developer Portal steps (Message C
 | Component | Role |
 |-----------|------|
 | **SQLite** | Source of truth — domains, hashes, settings, logs |
-| **In-memory L1** | Hot-path blocklist (~21k domains) |
-| **Redis (optional)** | Multi-instance prep — default **off** |
+| **In-memory L1** | Hot-path blocklist (~21k domains, suffix lookup) |
 | **Node + discord.js v14** | Bot runtime |
 
 Single process, multiple guilds. Running multiple bot instances against one SQLite file is **not supported**.
@@ -33,12 +32,21 @@ Single process, multiple guilds. Running multiple bot instances against one SQLi
 
 - New servers start in **log-only mode (2)** until you configure actions
 - Production default action: **delete + log (1)**
-- Auto-ban only on: domain blocklist match, strict pHash, or dual signal
-- Fuzzy pHash alone never auto-bans
+- Auto-ban / high-confidence timeout only on: **guild-added domain**, **strict pHash**, or **dual signal**
+- Global seed domain alone: delete + log (no auto-ban) — reduces false positives from third-party lists
+- Fuzzy pHash alone: optional **quarantine** (timeout), not ban
+- Use `/add-allow-domain` to exempt trusted domains; `/config restore` to undo false positives
+
+Blocklist provenance: [data/text/SOURCES.md](data/text/SOURCES.md)
 
 ## Commands
 
-`/about` · `/get-hash` · `/add-scam` · `/remove-scam` · `/add-domain` · `/remove-domain` · `/list-domains` · `/config`
+`/about` · `/get-hash` · `/add-scam` · `/remove-scam` · `/add-domain` · `/remove-domain` · `/list-domains` · `/add-allow-domain` · `/remove-allow-domain` · `/list-allow-domains` · `/config`
+
+## Roadmap
+
+- **Redis** — reserved for future multi-instance cooldown/cache (not implemented; single SQLite process today)
+- **PostgreSQL** — shared storage for horizontal scale-out
 
 ## Maintenance
 

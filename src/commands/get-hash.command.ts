@@ -1,5 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import type { BotCommand } from '../shared/types/index.js';
+import { ImageFetchError } from '../shared/utils/image-fetch.util.js';
 import { client } from '../infra/bot/client.js';
 import { isValidHexHash } from '../shared/utils/hamming.util.js';
 
@@ -21,8 +22,18 @@ const GetHashCommand: BotCommand = {
     }
 
     await interaction.deferReply({ ephemeral: true });
-    const hash = await client.services!.phashService.computeHashFromUrl(attachment.url);
-    await interaction.editReply({ content: `\`${hash}\`` });
+    try {
+      const hash = await client.services!.phashService.computeHashFromUrl(attachment.url);
+      await interaction.editReply({ content: `\`${hash}\`` });
+    } catch (error) {
+      const message =
+        error instanceof ImageFetchError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : 'Failed to process image';
+      await interaction.editReply({ content: message });
+    }
   },
 };
 

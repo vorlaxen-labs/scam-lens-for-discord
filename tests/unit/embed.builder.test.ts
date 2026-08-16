@@ -34,6 +34,7 @@ describe('EmbedBuilder', () => {
       match: 'c03f3f9080fede18',
       action: 'delete',
       distance: 2,
+      trustScore: 72,
       guildName: 'Vorlaxen Labs',
       guildId: '1412898757527207968',
       messageId: '1234567890',

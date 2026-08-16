@@ -4,7 +4,10 @@ coverage/
 .env
 .env.*
 !env/.env.example
+.pnpm-store/
 data/scam-lens.db
 data/scam-lens.db-*
+data/test-scam-lens.db
+data/scam-lens.pid
 *.log
 .DS_Store

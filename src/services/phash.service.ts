@@ -37,12 +37,24 @@ export class PhashService {
   }
 
   async computeHashFromBuffer(buffer: Buffer): Promise<string> {
-    const normalized = await sharp(buffer, { animated: true, limitInputPixels: IMAGE_FETCH_LIMITS.maxPixels })
-      .resize(512, 512, { fit: 'inside', withoutEnlargement: true })
-      .toBuffer();
+    try {
+      const normalized = await sharp(buffer, {
+        animated: true,
+        pages: 1,
+        limitInputPixels: IMAGE_FETCH_LIMITS.maxPixels,
+      })
+        .resize(512, 512, { fit: 'inside', withoutEnlargement: true })
+        .toBuffer();
 
-    const hash = await imghash.hash(normalized, PHASH_SIZE, 'hex');
-    return hash.toLowerCase();
+      const hash = await imghash.hash(normalized, PHASH_SIZE, 'hex');
+      return hash.toLowerCase();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Image processing failed';
+      if (message.includes('pixel') || message.includes('Input image')) {
+        throw new ImageFetchError('Image exceeds processing limits');
+      }
+      throw error;
+    }
   }
 
   async computeHashFromUrl(url: string): Promise<string> {

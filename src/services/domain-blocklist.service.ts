@@ -45,10 +45,18 @@ export function isDomainBlocked(hostname: string, blockedDomain: string): boolea
   return hostname === blockedDomain || hostname.endsWith(`.${blockedDomain}`);
 }
 
-export function isAllowedDomain(hostname: string, allowedDomains: string[]): boolean {
-  return allowedDomains.some(
-    (allowed) => hostname === allowed || hostname.endsWith(`.${allowed}`),
-  );
+export function findBlockedSuffix(hostname: string, blocked: Set<string>): string | null {
+  const labels = hostname.split('.');
+  for (let index = 0; index < labels.length; index++) {
+    const suffix = labels.slice(index).join('.');
+    if (blocked.has(suffix)) return suffix;
+  }
+  return null;
+}
+
+export function isAllowedDomain(hostname: string, allowedDomains: Set<string> | string[]): boolean {
+  const allowed = allowedDomains instanceof Set ? allowedDomains : new Set(allowedDomains);
+  return findBlockedSuffix(hostname, allowed) !== null;
 }
 
 export class DomainBlocklistService {
@@ -92,6 +100,26 @@ export class DomainBlocklistService {
     return [...(this.guildDomains.get(guildId) ?? [])].sort();
   }
 
+  listGuildDomainRecords(guildId: string) {
+    return this.blockedDomainRepository.listGuildDomainRecords(guildId);
+  }
+
+  addGuildAllowedDomain(guildId: string, domain: string, addedBy: string): void {
+    this.allowedDomainRepository.add(guildId, normalizeDomain(domain), addedBy);
+  }
+
+  removeGuildAllowedDomain(guildId: string, domain: string): boolean {
+    return this.allowedDomainRepository.remove(guildId, normalizeDomain(domain));
+  }
+
+  listGuildAllowedDomains(guildId: string): string[] {
+    return this.allowedDomainRepository.listForGuild(guildId);
+  }
+
+  countGuildAllowedDomains(guildId: string): number {
+    return this.listGuildAllowedDomains(guildId).length;
+  }
+
   getGlobalDomainCount(): number {
     return this.globalDomains.size;
   }
@@ -109,12 +137,12 @@ export class DomainBlocklistService {
       if (embed.title) texts.push(embed.title);
       if (embed.description) texts.push(embed.description);
       if (embed.author?.url) texts.push(embed.author.url);
-      for (const field of embed.fields) {
+      for (const field of embed.fields ?? []) {
         texts.push(field.name, field.value);
       }
     }
 
-    for (const componentRow of message.components) {
+    for (const componentRow of message.components ?? []) {
       if (!('components' in componentRow)) continue;
       for (const component of componentRow.components) {
         if ('url' in component && component.url) {
@@ -144,10 +172,12 @@ export class DomainBlocklistService {
     return [...hostnames].filter(Boolean);
   }
 
-  scanMessage(message: Message, guildId: string): DomainMatch[] {
-    const allowedDomains = this.allowedDomainRepository.listForGuild(guildId);
+  private matchHostnames(
+    hostnames: Iterable<string>,
+    guildId: string,
+  ): DomainMatch[] {
+    const allowedDomains = new Set(this.allowedDomainRepository.listForGuild(guildId));
     const guildDomains = this.guildDomains.get(guildId) ?? new Set<string>();
-    const hostnames = this.extractCandidateHostnames(message);
     const matches: DomainMatch[] = [];
 
     for (const hostname of hostnames) {
@@ -155,31 +185,27 @@ export class DomainBlocklistService {
         continue;
       }
 
-      for (const blockedDomain of this.globalDomains) {
-        if (isDomainBlocked(hostname, blockedDomain)) {
-          matches.push({ domain: hostname, blockedDomain, source: 'global' });
-          break;
-        }
-      }
-
-      if (matches.some((match) => match.domain === hostname)) {
+      const globalMatch = findBlockedSuffix(hostname, this.globalDomains);
+      if (globalMatch) {
+        matches.push({ domain: hostname, blockedDomain: globalMatch, source: 'global' });
         continue;
       }
 
-      for (const blockedDomain of guildDomains) {
-        if (isDomainBlocked(hostname, blockedDomain)) {
-          matches.push({ domain: hostname, blockedDomain, source: 'guild' });
-          break;
-        }
+      const guildMatch = findBlockedSuffix(hostname, guildDomains);
+      if (guildMatch) {
+        matches.push({ domain: hostname, blockedDomain: guildMatch, source: 'guild' });
       }
     }
 
     return matches;
   }
 
+  scanMessage(message: Message, guildId: string): DomainMatch[] {
+    const hostnames = this.extractCandidateHostnames(message);
+    return this.matchHostnames(hostnames, guildId);
+  }
+
   dryRun(text: string, guildId: string): DomainMatch[] {
-    const allowedDomains = this.allowedDomainRepository.listForGuild(guildId);
-    const guildDomains = this.guildDomains.get(guildId) ?? new Set<string>();
     const hostnames = new Set<string>();
 
     let scanText = text;
@@ -198,26 +224,6 @@ export class DomainBlocklistService {
       if (normalized.includes('.')) hostnames.add(normalized);
     }
 
-    const matches: DomainMatch[] = [];
-    for (const hostname of hostnames) {
-      if (isAllowedDomain(hostname, allowedDomains)) continue;
-
-      for (const blockedDomain of this.globalDomains) {
-        if (isDomainBlocked(hostname, blockedDomain)) {
-          matches.push({ domain: hostname, blockedDomain, source: 'global' });
-          break;
-        }
-      }
-      if (matches.some((match) => match.domain === hostname)) continue;
-
-      for (const blockedDomain of guildDomains) {
-        if (isDomainBlocked(hostname, blockedDomain)) {
-          matches.push({ domain: hostname, blockedDomain, source: 'guild' });
-          break;
-        }
-      }
-    }
-
-    return matches;
+    return this.matchHostnames(hostnames, guildId);
   }
 }

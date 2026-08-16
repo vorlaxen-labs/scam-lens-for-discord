@@ -35,6 +35,7 @@ function formatAction(action: string): string {
     ban_partial: 'Ban failed (partial)',
     timeout: 'User timed out',
     timeout_partial: 'Timeout failed (partial)',
+    quarantine: 'User quarantined (timeout)',
   };
   return labels[action] ?? action;
 }
@@ -101,6 +102,10 @@ function parseMetadataPreview(metadataJson: string): string {
         .join('\n');
       parts.push(`**Attachments:**\n${urls}`);
     }
+    const embedImages = (data as { embedImages?: string[] }).embedImages;
+    if (embedImages?.length) {
+      parts.push(`**Embed images:**\n${embedImages.slice(0, 3).join('\n')}`);
+    }
     return parts.length > 0 ? parts.join('\n') : 'No message snapshot';
   } catch {
     return 'Metadata unavailable';
@@ -131,7 +136,12 @@ export class EmbedBuilder {
         },
         {
           name: formatDetectionType(context.type),
-          value: formatMatch(context.type, context.match, context.distance),
+          value: [
+            formatMatch(context.type, context.match, context.distance),
+            context.trustScore !== undefined ? `Trust score: **${context.trustScore}/100**` : null,
+          ]
+            .filter(Boolean)
+            .join('\n'),
           inline: false,
         },
       )
@@ -161,6 +171,7 @@ export class EmbedBuilder {
             formatAction(context.action),
             `Mode: ${formatActionMode(context.actionMode)}`,
             `Result: ${context.actionResult}`,
+            `Trust score: ${context.trustScore}/100`,
           ].join('\n'),
           inline: true,
         },
@@ -211,7 +222,8 @@ export class EmbedBuilder {
         [
           'Open-source Discord protection against **scam images** and **malicious domains**.',
           'Every message is scanned for known scam visuals (pHash) and blocklisted URLs, then your server\'s action mode is applied.',
-          'Auto-ban only triggers on high-confidence signals — domain hits, strict pHash, or dual detection.',
+          'Auto-ban only triggers on high-confidence signals — guild domain, strict pHash, or dual detection.',
+          'Global seed domain alone deletes + logs. Fuzzy pHash may trigger quarantine (timeout).',
         ].join('\n\n'),
       )
       .setColor(COLORS.neutral)
@@ -259,7 +271,8 @@ export class EmbedBuilder {
           value: [
             '`/about` · `/get-hash` · `/add-scam` · `/remove-scam`',
             '`/add-domain` · `/remove-domain` · `/list-domains`',
-            '`/config` — log channel, thresholds, action, status, test',
+            '`/add-allow-domain` · `/remove-allow-domain` · `/list-allow-domains`',
+            '`/config` — log channel, thresholds, action, quarantine, restore, status',
           ].join('\n'),
           inline: false,
         },

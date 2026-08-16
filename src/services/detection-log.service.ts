@@ -30,6 +30,14 @@ export class DetectionLogService {
     return `SL-${ulid()}`;
   }
 
+  findByOperationId(operationId: string) {
+    return this.repository.findByOperationId(operationId);
+  }
+
+  markRestored(operationId: string, restoredBy: string): boolean {
+    return this.repository.markRestored(operationId, restoredBy);
+  }
+
   async record(context: DetectionContext): Promise<string> {
     this.repository.insert(context);
 
@@ -68,6 +76,7 @@ export class DetectionLogService {
       action: context.actionTaken,
       distance: context.hammingDistance ?? undefined,
       guildName,
+      trustScore: context.trustScore,
     };
 
     const technicalContext: DetectionTechnicalContext = {
@@ -82,6 +91,7 @@ export class DetectionLogService {
       domainMatches: context.domainMatches,
       imageMatches: context.imageMatches,
       metadataJson: context.metadataJson,
+      trustScore: context.trustScore,
     };
 
     for (const target of targets) {
@@ -191,7 +201,7 @@ export function buildMetadataSnapshot(message: {
   channelId: string;
   content: string | null;
   attachments: { url: string; name: string | null }[];
-  embeds: { url: string | null; title: string | null }[];
+  embeds: { url: string | null; title: string | null; imageUrl?: string | null; thumbnailUrl?: string | null }[];
 }): string {
   return JSON.stringify({
     messageId: message.id,
@@ -202,6 +212,9 @@ export function buildMetadataSnapshot(message: {
       name: attachment.name,
     })),
     embedUrls: message.embeds.map((embed) => embed.url ?? embed.title).filter(Boolean),
+    embedImages: message.embeds.flatMap((embed) =>
+      [embed.imageUrl, embed.thumbnailUrl].filter(Boolean),
+    ),
     capturedAt: new Date().toISOString(),
   });
 }

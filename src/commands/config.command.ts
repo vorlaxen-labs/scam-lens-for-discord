@@ -3,7 +3,7 @@ import {
   SlashCommandBuilder,
 } from 'discord.js';
 import type { ActionMode, BotCommand, DomainMatch } from '../shared/types/index.js';
-import { scamConfig } from '../config/index.js';
+import { brandingConfig, scamConfig } from '../config/index.js';
 import { EmbedBuilder } from '../shared/embed/embed.builder.js';
 import { client } from '../infra/bot/client.js';
 
@@ -61,6 +61,40 @@ const ConfigCommand: BotCommand = {
         .setDescription('Enable or disable scam detection')
         .addBooleanOption((option) =>
           option.setName('value').setDescription('Enabled').setRequired(true),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('skip-bots')
+        .setDescription('Skip scanning messages from bots')
+        .addBooleanOption((option) =>
+          option.setName('value').setDescription('Skip bots').setRequired(true),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('quarantine')
+        .setDescription('Configure fuzzy pHash quarantine (timeout)')
+        .addBooleanOption((option) =>
+          option.setName('enabled').setDescription('Enable fuzzy quarantine'),
+        )
+        .addIntegerOption((option) =>
+          option
+            .setName('duration')
+            .setDescription('Quarantine duration in seconds (60-604800)')
+            .setMinValue(60)
+            .setMaxValue(604_800),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('restore')
+        .setDescription('Restore a user after a false positive (unban + remove timeout)')
+        .addUserOption((option) =>
+          option.setName('user').setDescription('User to restore').setRequired(true),
+        )
+        .addStringOption((option) =>
+          option.setName('operation_id').setDescription('Optional detection operation ID (SL-...)'),
         ),
     )
     .addSubcommand((sub) =>
@@ -135,6 +169,115 @@ const ConfigCommand: BotCommand = {
       return;
     }
 
+    if (subcommand === 'skip-bots') {
+      const value = interaction.options.getBoolean('value', true);
+      settings.skipBots = value;
+      services.guildSettingsService.update(settings);
+      await interaction.reply({
+        embeds: [EmbedBuilder.config('Skip bots', value ? 'On' : 'Off')],
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (subcommand === 'quarantine') {
+      const enabled = interaction.options.getBoolean('enabled');
+      const duration = interaction.options.getInteger('duration');
+      const changes: string[] = [];
+
+      if (enabled !== null) {
+        settings.quarantineFuzzyImages = enabled;
+        changes.push(`Enabled: ${enabled ? 'yes' : 'no'}`);
+      }
+      if (duration !== null) {
+        settings.quarantineDurationSeconds = duration;
+        changes.push(`Duration: ${duration}s`);
+      }
+
+      if (changes.length === 0) {
+        await interaction.reply({
+          embeds: [
+            EmbedBuilder.config(
+              'Quarantine',
+              [
+                `Enabled: ${settings.quarantineFuzzyImages ? 'yes' : 'no'}`,
+                `Duration: ${settings.quarantineDurationSeconds}s`,
+              ].join('\n'),
+            ),
+          ],
+          ephemeral: true,
+        });
+        return;
+      }
+
+      services.guildSettingsService.update(settings);
+      await interaction.reply({
+        embeds: [EmbedBuilder.config('Quarantine', changes.join('\n'))],
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (subcommand === 'restore') {
+      const user = interaction.options.getUser('user', true);
+      const operationId = interaction.options.getString('operation_id');
+      const guild = interaction.guild!;
+
+      if (operationId) {
+        const record = services.detectionLogService.findByOperationId(operationId);
+        if (!record || record.guildId !== guildId) {
+          await interaction.reply({
+            embeds: [EmbedBuilder.config('Restore failed', 'Operation ID not found for this server.')],
+            ephemeral: true,
+          });
+          return;
+        }
+        if (record.userId !== user.id) {
+          await interaction.reply({
+            embeds: [EmbedBuilder.config('Restore failed', 'Operation ID does not match the selected user.')],
+            ephemeral: true,
+          });
+          return;
+        }
+      }
+
+      const results: string[] = [];
+      try {
+        await guild.members.unban(user.id, 'Scam Lens: false positive restore');
+        results.push('Unban attempted');
+      } catch {
+        results.push('Unban skipped (not banned or missing permission)');
+      }
+
+      const member = await guild.members.fetch(user.id).catch(() => null);
+      if (member?.moderatable && member.communicationDisabledUntil) {
+        try {
+          await member.timeout(null, 'Scam Lens: false positive restore');
+          results.push('Timeout cleared');
+        } catch {
+          results.push('Timeout clear failed');
+        }
+      } else {
+        results.push('Timeout clear skipped');
+      }
+
+      if (operationId) {
+        const marked = services.detectionLogService.markRestored(operationId, interaction.user.id);
+        results.push(marked ? 'Detection log marked restored' : 'Detection log already restored');
+      }
+
+      await interaction.reply({
+        embeds: [
+          EmbedBuilder.success(
+            'User restored',
+            [`User: ${user.tag}`, ...results].join('\n'),
+          ),
+        ],
+        ephemeral: true,
+      });
+      return;
+    }
+
     if (subcommand === 'test') {
       const text = interaction.options.getString('text', true);
       const matches = services.domainBlocklistService.dryRun(text, guildId);
@@ -158,6 +301,9 @@ const ConfigCommand: BotCommand = {
     const centralLog = scamConfig.centralLogChannelId
       ? `<#${scamConfig.centralLogChannelId}> (all guilds)`
       : 'not configured';
+    const allowlistCount = services.domainBlocklistService.countGuildAllowedDomains(guildId);
+    const guildBlocklistCount = services.domainBlocklistService.listGuildDomains(guildId).length;
+
     await interaction.reply({
       embeds: [
         EmbedBuilder.config(
@@ -167,8 +313,13 @@ const ConfigCommand: BotCommand = {
             `Strict: ${settings.phashStrictThreshold}`,
             `Action: ${settings.actionMode}`,
             `Enabled: ${settings.enabled ? 'yes' : 'no'}`,
+            `Skip bots: ${settings.skipBots ? 'yes' : 'no'}`,
+            `Quarantine fuzzy: ${settings.quarantineFuzzyImages ? 'yes' : 'no'} (${settings.quarantineDurationSeconds}s)`,
+            `Guild blocklist: ${guildBlocklistCount} custom domains`,
+            `Allowlist: ${allowlistCount} domains`,
             `Guild log: ${guildLog}`,
             `Central log: ${centralLog}`,
+            `Global seed source: [SOURCES.md](${brandingConfig.githubUrl}/blob/main/data/text/SOURCES.md)`,
           ].join('\n'),
         ),
       ],

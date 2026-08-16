@@ -19,6 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:ci": "pnpm typecheck && pnpm test:coverage",
     "lint": "eslint src tests",
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx src/infra/database/migrate.ts",

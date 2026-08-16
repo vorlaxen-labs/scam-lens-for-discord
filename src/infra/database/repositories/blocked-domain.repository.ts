@@ -54,6 +54,27 @@ export class BlockedDomainRepository {
     return rows.map((row) => row.domain);
   }
 
+  listGuildDomainRecords(guildId: string): BlockedDomainRecord[] {
+    const rows = this.db
+      .prepare(
+        'SELECT id, guild_id, domain, source, added_by FROM blocked_domains WHERE guild_id = ? ORDER BY domain',
+      )
+      .all(guildId) as Array<{
+      id: number;
+      guild_id: string;
+      domain: string;
+      source: string;
+      added_by: string | null;
+    }>;
+    return rows.map((row) => ({
+      id: row.id,
+      guildId: row.guild_id,
+      domain: row.domain,
+      source: row.source,
+      addedBy: row.added_by,
+    }));
+  }
+
   removeStaleGlobalDomains(validDomains: Set<string>): number {
     const globals = this.listGlobalDomains();
     let removed = 0;

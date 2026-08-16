@@ -1,14 +1,12 @@
-import Database from 'better-sqlite3';
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
-import { MIGRATION_SQL } from '../../src/infra/database/schema.sql.js';
+import { createTestDb } from '../helpers/test-db.js';
 import { BlockedDomainRepository } from '../../src/infra/database/repositories/blocked-domain.repository.js';
 
 describe('BlockedDomainRepository partial unique indexes', () => {
-  let db: Database.Database;
+  let db: ReturnType<typeof createTestDb>;
 
   beforeEach(() => {
-    db = new Database(':memory:');
-    db.exec(MIGRATION_SQL);
+    db = createTestDb();
   });
 
   afterEach(() => {

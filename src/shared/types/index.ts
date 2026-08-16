@@ -47,6 +47,8 @@ export interface GuildSettings {
   skipWebhooks: boolean;
   skipBots: boolean;
   timeoutDurationSeconds: number;
+  quarantineFuzzyImages: boolean;
+  quarantineDurationSeconds: number;
 }
 
 export interface DomainMatch {
@@ -86,6 +88,7 @@ export interface DetectionContext {
   phashThreshold: number;
   phashStrictThreshold: number;
   actionMode: ActionMode;
+  trustScore: number;
 }
 
 export interface DetectionTechnicalContext extends DetectionEmbedContext {
@@ -99,6 +102,7 @@ export interface DetectionTechnicalContext extends DetectionEmbedContext {
   domainMatches: DomainMatch[];
   imageMatches: ImageMatch[];
   metadataJson: string;
+  trustScore: number;
 }
 
 export interface DetectionEmbedContext {
@@ -111,6 +115,7 @@ export interface DetectionEmbedContext {
   action: string;
   distance?: number;
   guildName?: string;
+  trustScore?: number;
 }
 
 export interface AboutEmbedContext {

@@ -32,6 +32,47 @@ function isAllowedHost(hostname: string): boolean {
   return ALLOWED_HOSTS.has(hostname.toLowerCase());
 }
 
+export function isAllowedImageUrl(url: string): boolean {
+  try {
+    return isAllowedHost(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+}
+
+export async function readResponseBodyWithLimit(
+  body: ReadableStream<Uint8Array>,
+  maxBytes: number,
+  signal?: AbortSignal,
+): Promise<Buffer> {
+  const reader = body.getReader();
+  const chunks: Buffer[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      if (signal?.aborted) {
+        throw new ImageFetchError('Image fetch aborted');
+      }
+
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value || value.byteLength === 0) continue;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        throw new ImageFetchError('Image exceeds maximum allowed size');
+      }
+
+      chunks.push(Buffer.from(value));
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  return Buffer.concat(chunks, totalBytes);
+}
+
 export async function fetchDiscordImage(url: string, signal?: AbortSignal): Promise<Buffer> {
   let currentUrl = url;
   let redirects = 0;
@@ -81,12 +122,20 @@ export async function fetchDiscordImage(url: string, signal?: AbortSignal): Prom
         throw new ImageFetchError('Image exceeds maximum allowed size');
       }
 
-      const arrayBuffer = await response.arrayBuffer();
-      if (arrayBuffer.byteLength > IMAGE_FETCH_LIMITS.maxBytes) {
-        throw new ImageFetchError('Image exceeds maximum allowed size');
+      if (!response.body) {
+        throw new ImageFetchError('Image response has no body');
       }
 
-      return Buffer.from(arrayBuffer);
+      return await readResponseBodyWithLimit(
+        response.body,
+        IMAGE_FETCH_LIMITS.maxBytes,
+        controller.signal,
+      );
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new ImageFetchError('Image fetch timed out');
+      }
+      throw error;
     } finally {
       clearTimeout(timeout);
       signal?.removeEventListener('abort', abortHandler);

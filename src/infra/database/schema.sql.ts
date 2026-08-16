@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS guild_settings (
   skip_webhooks INTEGER NOT NULL DEFAULT 0,
   skip_bots INTEGER NOT NULL DEFAULT 1,
   timeout_duration_seconds INTEGER NOT NULL DEFAULT 3600,
+  quarantine_fuzzy_images INTEGER NOT NULL DEFAULT 1,
+  quarantine_duration_seconds INTEGER NOT NULL DEFAULT 900,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -55,6 +57,9 @@ CREATE TABLE IF NOT EXISTS detection_logs (
   action_taken TEXT NOT NULL,
   action_result TEXT NOT NULL,
   metadata_json TEXT,
+  trust_score INTEGER,
+  restored_at TEXT,
+  restored_by TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

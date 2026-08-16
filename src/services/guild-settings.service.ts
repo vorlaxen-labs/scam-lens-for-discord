@@ -20,6 +20,8 @@ export class GuildSettingsService {
       skipWebhooks: false,
       skipBots: true,
       timeoutDurationSeconds: 3600,
+      quarantineFuzzyImages: true,
+      quarantineDurationSeconds: 900,
     };
 
     return this.repository.create(settings);
