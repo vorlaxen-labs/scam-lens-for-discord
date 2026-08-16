@@ -82,4 +82,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_guild_allowed_domain
 
 CREATE INDEX IF NOT EXISTS idx_detection_logs_guild ON detection_logs(guild_id);
 CREATE INDEX IF NOT EXISTS idx_detection_logs_created ON detection_logs(created_at);
+
+CREATE TABLE IF NOT EXISTS processed_messages (
+  message_id TEXT PRIMARY KEY,
+  processed_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_processed_messages_at ON processed_messages(processed_at);
 `;

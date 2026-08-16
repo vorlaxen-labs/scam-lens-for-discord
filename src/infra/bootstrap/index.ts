@@ -4,6 +4,7 @@ import { client } from '../bot/client.js';
 import { botConfig } from '../../config/index.js';
 import { createServices, refreshRuntimeCaches } from './create-services.js';
 import { runSeed } from './seed.js';
+import { acquireSingleInstanceLock } from './single-instance.js';
 import { logger } from '../logger/index.js';
 
 function registerSignals(database: DatabaseService): void {
@@ -19,6 +20,8 @@ function registerSignals(database: DatabaseService): void {
 }
 
 export async function bootstrap(): Promise<void> {
+  acquireSingleInstanceLock();
+
   const database = DatabaseService.getInstance();
   database.initialize();
 

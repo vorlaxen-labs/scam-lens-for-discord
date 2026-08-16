@@ -6,8 +6,9 @@
   "author": "Vorlaxen",
   "license": "MIT",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   },
+  "packageManager": "pnpm@9.15.9",
   "imports": {
     "#/*": "./dist/*"
   },
@@ -20,7 +21,8 @@
     "test:coverage": "vitest run --coverage",
     "lint": "eslint src tests",
     "typecheck": "tsc --noEmit",
-    "db:migrate": "tsx src/infra/database/migrate.ts"
+    "db:migrate": "tsx src/infra/database/migrate.ts",
+    "deploy-commands": "tsx src/scripts/deploy-commands.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",
@@ -40,8 +42,5 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vitest": "^3.0.5"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": ["better-sqlite3", "sharp", "esbuild"]
   }
 }

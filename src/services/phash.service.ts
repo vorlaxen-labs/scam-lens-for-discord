@@ -20,6 +20,22 @@ export class PhashService {
     this.hashRecords = records;
   }
 
+  getHashCounts(): { global: number; guildEntries: number } {
+    let global = 0;
+    let guildEntries = 0;
+    for (const record of this.hashRecords) {
+      if (record.guildId === null) global++;
+      else guildEntries++;
+    }
+    return { global, guildEntries };
+  }
+
+  countForGuild(guildId: string): number {
+    return this.hashRecords.filter(
+      (record) => record.guildId === null || record.guildId === guildId,
+    ).length;
+  }
+
   async computeHashFromBuffer(buffer: Buffer): Promise<string> {
     const normalized = await sharp(buffer, { animated: true, limitInputPixels: IMAGE_FETCH_LIMITS.maxPixels })
       .resize(512, 512, { fit: 'inside', withoutEnlargement: true })
@@ -50,6 +66,7 @@ export class PhashService {
             matchedHash: record.hash,
             hammingDistance: distance,
             label: record.label,
+            hashSource: record.source,
           };
         }
       } catch (error) {

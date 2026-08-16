@@ -2,7 +2,8 @@ import {
   ChannelType,
   SlashCommandBuilder,
 } from 'discord.js';
-import type { ActionMode, BotCommand } from '../shared/types/index.js';
+import type { ActionMode, BotCommand, DomainMatch } from '../shared/types/index.js';
+import { scamConfig } from '../config/index.js';
 import { EmbedBuilder } from '../shared/embed/embed.builder.js';
 import { client } from '../infra/bot/client.js';
 
@@ -145,9 +146,7 @@ const ConfigCommand: BotCommand = {
         return;
       }
 
-      const lines = matches.map(
-        (match) => `${match.domain} → ${match.blockedDomain} (${match.source})`,
-      );
+      const lines = matches.map((match) => formatDryRunMatch(match));
       await interaction.reply({
         embeds: [EmbedBuilder.config('Dry-run matches', lines.join('\n'))],
         ephemeral: true,
@@ -155,7 +154,10 @@ const ConfigCommand: BotCommand = {
       return;
     }
 
-    const logChannel = settings.logChannelId ? `<#${settings.logChannelId}>` : 'not set';
+    const guildLog = settings.logChannelId ? `<#${settings.logChannelId}>` : 'not set (use /config log-channel)';
+    const centralLog = scamConfig.centralLogChannelId
+      ? `<#${scamConfig.centralLogChannelId}> (all guilds)`
+      : 'not configured';
     await interaction.reply({
       embeds: [
         EmbedBuilder.config(
@@ -165,7 +167,8 @@ const ConfigCommand: BotCommand = {
             `Strict: ${settings.phashStrictThreshold}`,
             `Action: ${settings.actionMode}`,
             `Enabled: ${settings.enabled ? 'yes' : 'no'}`,
-            `Log: ${logChannel}`,
+            `Guild log: ${guildLog}`,
+            `Central log: ${centralLog}`,
           ].join('\n'),
         ),
       ],
@@ -175,3 +178,10 @@ const ConfigCommand: BotCommand = {
 };
 
 export default ConfigCommand;
+
+function formatDryRunMatch(match: DomainMatch): string {
+  if (match.domain === match.blockedDomain) {
+    return `${match.domain} (${match.source} blocklist)`;
+  }
+  return `${match.domain} → ${match.blockedDomain} (${match.source})`;
+}

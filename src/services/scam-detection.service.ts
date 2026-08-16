@@ -22,9 +22,6 @@ export interface MessageScanMatches {
 }
 
 export class ScamDetectionService {
-  private readonly processedMessages = new Map<string, number>();
-  private readonly dedupTtlMs = 60_000;
-
   constructor(
     private readonly guildSettingsService: GuildSettingsService,
     private readonly detectionLogService: DetectionLogService,
@@ -47,28 +44,8 @@ export class ScamDetectionService {
     return false;
   }
 
-  isDuplicate(messageId: string): boolean {
-    this.cleanupDedupCache();
-    return this.processedMessages.has(messageId);
-  }
-
-  markProcessed(messageId: string): void {
-    this.processedMessages.set(messageId, Date.now());
-  }
-
-  private cleanupDedupCache(): void {
-    const now = Date.now();
-    for (const [messageId, timestamp] of this.processedMessages) {
-      if (now - timestamp > this.dedupTtlMs) {
-        this.processedMessages.delete(messageId);
-      }
-    }
-  }
-
   async handleDetection(message: Message, matches: MessageScanMatches): Promise<void> {
     if (!message.guildId || !message.guild) return;
-    if (this.isDuplicate(message.id)) return;
-    this.markProcessed(message.id);
 
     const settings = this.guildSettingsService.getOrCreate(message.guildId);
     if (!settings.enabled) return;
@@ -134,6 +111,11 @@ export class ScamDetectionService {
       actionTaken,
       actionResult: actionResults.length > 0 ? actionResults.join(',') : 'log_only',
       metadataJson,
+      domainMatches,
+      imageMatches,
+      phashThreshold: settings.phashThreshold,
+      phashStrictThreshold: settings.phashStrictThreshold,
+      actionMode: settings.actionMode,
     });
   }
 

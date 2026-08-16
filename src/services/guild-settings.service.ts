@@ -11,7 +11,7 @@ export class GuildSettingsService {
 
     const settings: GuildSettings = {
       guildId,
-      logChannelId: scamConfig.logChannelId,
+      logChannelId: null,
       phashThreshold: scamConfig.phashThreshold,
       phashStrictThreshold: scamConfig.phashStrictThreshold,
       actionMode: 2 as ActionMode,

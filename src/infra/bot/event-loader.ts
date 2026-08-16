@@ -25,6 +25,25 @@ async function collectEventFiles(directory: string): Promise<string[]> {
   return files;
 }
 
+function registerEvent(client: ScamLensClient, event: BotEvent): void {
+  const existing = client.eventHandlerRefs.get(event.name);
+  if (existing) {
+    client.off(event.name, existing);
+  }
+
+  const handler = (...args: unknown[]) => {
+    void event.execute(...(args as Parameters<typeof event.execute>));
+  };
+
+  client.eventHandlerRefs.set(event.name, handler);
+
+  if (event.once) {
+    client.once(event.name, handler);
+  } else {
+    client.on(event.name, handler);
+  }
+}
+
 export async function loadEvents(client: ScamLensClient): Promise<void> {
   const isProd = process.env.NODE_ENV === 'production';
   const eventsDir = path.resolve(
@@ -36,11 +55,7 @@ export async function loadEvents(client: ScamLensClient): Promise<void> {
   for (const file of files) {
     const imported = await import(pathToFileURL(file).href);
     const event = (imported.default ?? imported) as BotEvent;
-    if (event.once) {
-      client.once(event.name, (...args) => event.execute(...args));
-    } else {
-      client.on(event.name, (...args) => event.execute(...args));
-    }
+    registerEvent(client, event);
     logger.debug({ event: event.name }, 'Loaded event');
   }
 

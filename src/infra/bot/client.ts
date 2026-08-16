@@ -9,6 +9,8 @@ import type { Services } from '../../shared/types/index.js';
 export class ScamLensClient extends Client {
   readonly commands = new Collection<string, BotCommand>();
   services: Services | null = null;
+  readonly eventHandlerRefs = new Map<string, (...args: unknown[]) => void>();
+  private started = false;
 
   constructor() {
     super({
@@ -26,6 +28,13 @@ export class ScamLensClient extends Client {
   }
 
   async start(token: string, services: Services): Promise<void> {
+    if (this.started) {
+      logger.warn('Client already started — skipping duplicate bootstrap');
+      this.services = services;
+      return;
+    }
+    this.started = true;
+
     this.services = services;
     await loadEvents(this);
     await loadCommands(this);

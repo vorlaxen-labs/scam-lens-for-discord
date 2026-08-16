@@ -1,7 +1,11 @@
+import { createRequire } from 'node:module';
 import { loadEnv } from '../shared/utils/load-env.util.js';
 import { EnvUtils } from '../shared/utils/env.util.js';
 
 loadEnv();
+
+const require = createRequire(import.meta.url);
+const { version: appVersion } = require('../../package.json') as { version: string };
 
 export const botConfig = {
   token: EnvUtils.string('BOT_TOKEN'),
@@ -14,7 +18,8 @@ export const scamConfig = {
   defaultActionMode: EnvUtils.number('SCAM_ACTION', 1),
   phashThreshold: EnvUtils.number('PHASH_THRESHOLD', 8),
   phashStrictThreshold: EnvUtils.number('PHASH_STRICT_THRESHOLD', 3),
-  logChannelId: process.env.LOG_CHANNEL_ID || null,
+  /** Central log hub — receives detections from every guild (main guild channel). */
+  centralLogChannelId: process.env.LOG_CHANNEL_ID || null,
   timeoutDurationSeconds: EnvUtils.number('TIMEOUT_DURATION_SECONDS', 3600),
 } as const;
 
@@ -27,8 +32,16 @@ export const brandingConfig = {
   authorUrl: 'https://vorlaxen.com',
   projectName: 'Scam Lens For Discord',
   githubUrl: EnvUtils.string('GITHUB_REPO_URL', 'https://github.com/vorlaxen/scam-lens-discord-bot'),
+  docsUrl: EnvUtils.string(
+    'DOCS_URL',
+    'https://github.com/vorlaxen/scam-lens-discord-bot/blob/main/docs/setup.md',
+  ),
   copyright: '© Vorlaxen',
   footerText: 'Scam Lens by Vorlaxen',
+} as const;
+
+export const appConfig = {
+  version: appVersion,
 } as const;
 
 export const redisConfig = {

@@ -60,6 +60,7 @@ export interface ImageMatch {
   matchedHash: string;
   hammingDistance: number;
   label: string | null;
+  hashSource: string;
 }
 
 export interface ScanResult {
@@ -80,6 +81,24 @@ export interface DetectionContext {
   actionTaken: string;
   actionResult: string;
   metadataJson: string;
+  domainMatches: DomainMatch[];
+  imageMatches: ImageMatch[];
+  phashThreshold: number;
+  phashStrictThreshold: number;
+  actionMode: ActionMode;
+}
+
+export interface DetectionTechnicalContext extends DetectionEmbedContext {
+  guildId: string;
+  messageId: string;
+  channelId: string;
+  actionResult: string;
+  actionMode: ActionMode;
+  phashThreshold: number;
+  phashStrictThreshold: number;
+  domainMatches: DomainMatch[];
+  imageMatches: ImageMatch[];
+  metadataJson: string;
 }
 
 export interface DetectionEmbedContext {
@@ -91,6 +110,23 @@ export interface DetectionEmbedContext {
   match: string;
   action: string;
   distance?: number;
+  guildName?: string;
+}
+
+export interface AboutEmbedContext {
+  version: string;
+  globalDomainCount: number;
+  globalHashCount: number;
+  guildCount: number;
+  guild?: {
+    enabled: boolean;
+    actionMode: ActionMode;
+    phashThreshold: number;
+    phashStrictThreshold: number;
+    customDomainCount: number;
+    logChannelId: string | null;
+    guildHashCount: number;
+  };
 }
 
 export interface Services {
@@ -100,4 +136,5 @@ export interface Services {
   scamDetectionService: import('../../services/scam-detection.service.js').ScamDetectionService;
   detectionLogService: import('../../services/detection-log.service.js').DetectionLogService;
   cooldownService: import('../../services/cooldown.service.js').CooldownService;
+  messageDedupRepository: import('../../infra/database/repositories/message-dedup.repository.js').MessageDedupRepository;
 }

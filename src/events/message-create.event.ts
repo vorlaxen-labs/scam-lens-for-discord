@@ -25,7 +25,7 @@ const MessageCreateEvent: BotEvent<typeof Events.MessageCreate> = {
       if (hasExemptRole) return;
     }
 
-    if (services.scamDetectionService.isDuplicate(message.id)) return;
+    if (!services.messageDedupRepository.tryClaim(message.id)) return;
 
     const domainMatches = services.domainBlocklistService.scanMessage(message, message.guildId);
 

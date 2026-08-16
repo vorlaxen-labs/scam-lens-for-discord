@@ -182,12 +182,20 @@ export class DomainBlocklistService {
     const guildDomains = this.guildDomains.get(guildId) ?? new Set<string>();
     const hostnames = new Set<string>();
 
-    for (const match of text.matchAll(URL_REGEX)) {
+    let scanText = text;
+    for (const match of text.matchAll(MARKDOWN_LINK_REGEX)) {
+      const hostname = extractHostname(match[2]!);
+      if (hostname) hostnames.add(hostname);
+      scanText = scanText.replace(match[0], ' ');
+    }
+
+    for (const match of scanText.matchAll(URL_REGEX)) {
       const hostname = extractHostname(match[0]);
       if (hostname) hostnames.add(hostname);
     }
-    for (const match of text.matchAll(DOMAIN_REGEX)) {
-      hostnames.add(normalizeDomain(match[0]));
+    for (const match of scanText.matchAll(DOMAIN_REGEX)) {
+      const normalized = normalizeDomain(match[0]);
+      if (normalized.includes('.')) hostnames.add(normalized);
     }
 
     const matches: DomainMatch[] = [];

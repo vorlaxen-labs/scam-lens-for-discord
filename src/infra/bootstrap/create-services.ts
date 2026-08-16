@@ -6,6 +6,7 @@ import {
   DetectionLogRepository,
 } from '../database/repositories/detection-log.repository.js';
 import { GuildSettingsRepository } from '../database/repositories/guild-settings.repository.js';
+import { MessageDedupRepository } from '../database/repositories/message-dedup.repository.js';
 import { CooldownService } from '../../services/cooldown.service.js';
 import { DomainBlocklistService } from '../../services/domain-blocklist.service.js';
 import { DetectionLogService } from '../../services/detection-log.service.js';
@@ -23,6 +24,8 @@ export function createServices(client: Client): Services {
   const scamHashRepository = new ScamHashRepository(db);
   const allowedDomainRepository = new AllowedDomainRepository(db);
   const detectionLogRepository = new DetectionLogRepository(db);
+  const messageDedupRepository = new MessageDedupRepository(db);
+  messageDedupRepository.purgeOlderThan(24);
 
   const guildSettingsService = new GuildSettingsService(guildSettingsRepository);
   const domainBlocklistService = new DomainBlocklistService(
@@ -44,6 +47,7 @@ export function createServices(client: Client): Services {
     scamDetectionService,
     detectionLogService,
     cooldownService,
+    messageDedupRepository,
   };
 }
 
