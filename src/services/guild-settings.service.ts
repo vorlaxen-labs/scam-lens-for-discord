@@ -19,8 +19,9 @@ export class GuildSettingsService {
       exemptRoleIds: [],
       skipWebhooks: false,
       skipBots: true,
+      timeoutEnabled: false,
       timeoutDurationSeconds: scamConfig.timeoutDurationSeconds,
-      quarantineFuzzyImages: true,
+      quarantineFuzzyImages: false,
       quarantineDurationSeconds: 900,
     };
 

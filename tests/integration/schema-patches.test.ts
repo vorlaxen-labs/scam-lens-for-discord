@@ -58,6 +58,7 @@ describe('applySchemaPatches', () => {
       .all()
       .map((row) => (row as { name: string }).name);
 
+    expect(guildColumns).toContain('timeout_enabled');
     expect(guildColumns).toContain('quarantine_fuzzy_images');
     expect(guildColumns).toContain('quarantine_duration_seconds');
     expect(logColumns).toContain('trust_score');

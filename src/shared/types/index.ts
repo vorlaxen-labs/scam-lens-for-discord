@@ -32,7 +32,7 @@ export interface BotEvent<T extends keyof ClientEvents = keyof ClientEvents> {
   execute: (...args: ClientEvents[T]) => Promise<void> | void;
 }
 
-export type ActionMode = 0 | 1 | 2 | 3 | 4;
+export type ActionMode = 0 | 1 | 2;
 
 export type DetectionType = 'image' | 'domain' | 'dual';
 
@@ -46,6 +46,7 @@ export interface GuildSettings {
   exemptRoleIds: string[];
   skipWebhooks: boolean;
   skipBots: boolean;
+  timeoutEnabled: boolean;
   timeoutDurationSeconds: number;
   quarantineFuzzyImages: boolean;
   quarantineDurationSeconds: number;

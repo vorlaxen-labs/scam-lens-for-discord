@@ -10,6 +10,21 @@ function hasColumn(db: Database.Database, table: string, column: string): boolea
 }
 
 export function applySchemaPatches(db: Database.Database): void {
+  if (!hasColumn(db, 'guild_settings', 'timeout_enabled')) {
+    db.exec('ALTER TABLE guild_settings ADD COLUMN timeout_enabled INTEGER NOT NULL DEFAULT 0');
+  }
+
+  db.exec(`
+    UPDATE guild_settings
+    SET action_mode = 1, timeout_enabled = 1
+    WHERE action_mode = 3
+  `);
+  db.exec(`
+    UPDATE guild_settings
+    SET action_mode = 0, timeout_enabled = 0
+    WHERE action_mode = 4
+  `);
+
   if (!hasColumn(db, 'guild_settings', 'quarantine_fuzzy_images')) {
     db.exec(
       'ALTER TABLE guild_settings ADD COLUMN quarantine_fuzzy_images INTEGER NOT NULL DEFAULT 1',

@@ -14,12 +14,12 @@ describe('GuildSettingsService', () => {
     db.close();
   });
 
-  it('lazy-inits new guild with log-only mode and quarantine defaults', () => {
+  it('lazy-inits new guild with log-only mode and timeout disabled', () => {
     const service = new GuildSettingsService(new GuildSettingsRepository(db));
     const settings = service.getOrCreate('guild-1');
     expect(settings.actionMode).toBe(2);
     expect(settings.phashThreshold).toBe(8);
-    expect(settings.quarantineFuzzyImages).toBe(true);
-    expect(settings.quarantineDurationSeconds).toBe(900);
+    expect(settings.timeoutEnabled).toBe(false);
+    expect(settings.timeoutDurationSeconds).toBeGreaterThan(0);
   });
 });

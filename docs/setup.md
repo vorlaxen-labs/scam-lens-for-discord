@@ -41,18 +41,17 @@ On first start the bot seeds `domains.txt` and `data/images/` into SQLite.
 3. Start in log-only: default for new guilds (mode 2)
 4. Test: `/config test text:https://example-scam-domain.test`
 5. When ready: `/config action mode:1` (delete + log)
+6. Optional timeout on all detections: `/config timeout enabled:true duration:3600`
 
-Action modes combine capabilities:
+### Action modes
 
-| Mode | On detection | High confidence (guild domain / strict pHash / dual) |
-|------|--------------|------------------------------------------------------|
+| Mode | On detection | High confidence |
+|------|--------------|-----------------|
 | `0` | Delete + log | Ban |
 | `1` | Delete + log | — |
 | `2` | Log only | — |
-| `3` | Delete + log | Timeout |
-| `4` | Delete + log | Timeout, then ban |
 
-Use `/config timeout-duration` for high-confidence timeout length. Fuzzy pHash quarantine is separate (`/config quarantine`).
+Timeout is **not** tied to action mode. Enable it separately with `/config timeout`. It runs on every detection except when a ban is issued.
 
 ## Troubleshooting
 

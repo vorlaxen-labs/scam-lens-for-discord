@@ -10,11 +10,10 @@ import {
   buildMatchedValue,
   buildMetadataSnapshot,
 } from './detection-log.helpers.js';
-import type { DomainMatch, GuildSettings, ImageMatch } from '../shared/types/index.js';
+import type { DomainMatch, ImageMatch } from '../shared/types/index.js';
 import {
   ActionFlag,
   actionModeIncludes,
-  isLogOnlyMode,
 } from '../shared/utils/action-mode.util.js';
 import { logger } from '../infra/logger/index.js';
 
@@ -76,40 +75,8 @@ export function shouldAutoBan(
   return false;
 }
 
-export function shouldQuarantineFuzzyImage(
-  settings: GuildSettings,
-  domainMatches: DomainMatch[],
-  imageMatches: ImageMatch[],
-): boolean {
-  if (!settings.quarantineFuzzyImages || isLogOnlyMode(settings.actionMode)) return false;
-  if (imageMatches.length === 0) return false;
-  if (shouldAutoBan(domainMatches, imageMatches, settings.phashStrictThreshold)) return false;
-
-  return imageMatches.some(
-    (match) =>
-      match.hammingDistance > settings.phashStrictThreshold &&
-      match.hammingDistance <= settings.phashThreshold,
-  );
-}
-
-export function resolveModerationActionTaken(
-  shouldBan: boolean,
-  shouldTimeout: boolean,
-  banSucceeded: boolean | null,
-  timeoutSucceeded: boolean | null,
-): string {
-  if (shouldBan && shouldTimeout) {
-    if (timeoutSucceeded && banSucceeded) return 'timeout+ban';
-    if (timeoutSucceeded) return 'timeout+ban_partial';
-    if (banSucceeded) return 'timeout_partial+ban';
-    return 'timeout_partial';
-  }
-
-  if (shouldBan) {
-    return banSucceeded ? 'ban' : 'ban_partial';
-  }
-
-  return timeoutSucceeded ? 'timeout' : 'timeout_partial';
+export function shouldApplyTimeout(timeoutEnabled: boolean, willBan: boolean): boolean {
+  return timeoutEnabled && !willBan;
 }
 
 export class ScamDetectionService {
@@ -157,11 +124,8 @@ export class ScamDetectionService {
       imageMatches,
       settings.phashStrictThreshold,
     );
-    const quarantineEligible = shouldQuarantineFuzzyImage(
-      settings,
-      domainMatches,
-      imageMatches,
-    );
+    const willBan =
+      autoBanEligible && actionModeIncludes(settings.actionMode, ActionFlag.BAN);
 
     const actionResults: string[] = [];
     let actionTaken = 'log';
@@ -172,42 +136,23 @@ export class ScamDetectionService {
       if (deleted) actionTaken = 'delete';
     }
 
-    const shouldBan =
-      autoBanEligible && actionModeIncludes(settings.actionMode, ActionFlag.BAN);
-    const shouldTimeout =
-      autoBanEligible && actionModeIncludes(settings.actionMode, ActionFlag.TIMEOUT);
-
-    if (shouldBan || shouldTimeout) {
+    if (willBan) {
       await this.sendWarningDm(message);
-
-      let banSucceeded: boolean | null = null;
-      let timeoutSucceeded: boolean | null = null;
-
-      // Timeout must run before ban — a banned member is no longer in the guild.
-      if (shouldTimeout) {
-        timeoutSucceeded = await this.tryTimeoutMember(message, settings.timeoutDurationSeconds);
-        actionResults.push(timeoutSucceeded ? 'timeout:success' : 'timeout:failed');
-      }
-
-      if (shouldBan) {
-        banSucceeded = await this.tryBanMember(message);
-        actionResults.push(banSucceeded ? 'ban:success' : 'ban:failed');
-      }
-
-      actionTaken = resolveModerationActionTaken(
-        shouldBan,
-        shouldTimeout,
-        banSucceeded,
-        timeoutSucceeded,
-      );
-    } else if (quarantineEligible) {
-      const quarantined = await this.tryTimeoutMember(
+      const banned = await this.tryBanMember(message);
+      actionResults.push(banned ? 'ban:success' : 'ban:failed');
+      actionTaken = banned ? 'ban' : 'ban_partial';
+    } else if (shouldApplyTimeout(settings.timeoutEnabled, willBan)) {
+      const timedOut = await this.tryTimeoutMember(
         message,
-        settings.quarantineDurationSeconds,
-        'Scam Lens: fuzzy scam image match — temporary quarantine',
+        settings.timeoutDurationSeconds,
+        'Scam Lens: scam content detected',
       );
-      actionResults.push(quarantined ? 'quarantine:success' : 'quarantine:failed');
-      if (quarantined) actionTaken = 'quarantine';
+      actionResults.push(timedOut ? 'timeout:success' : 'timeout:failed');
+      if (timedOut) {
+        actionTaken = actionTaken === 'delete' ? 'delete+timeout' : 'timeout';
+      } else if (actionTaken === 'log') {
+        actionTaken = 'timeout_partial';
+      }
     }
 
     await this.detectionLogService.record({
@@ -277,7 +222,7 @@ export class ScamDetectionService {
   private async tryTimeoutMember(
     message: Message,
     durationSeconds: number,
-    reason = 'Scam Lens: high-confidence scam content detected',
+    reason = 'Scam Lens: scam content detected',
   ): Promise<boolean> {
     const member =
       message.member ?? (await message.guild!.members.fetch(message.author.id).catch(() => null));

@@ -6,40 +6,39 @@ import {
   formatActionMode,
   getActionFlags,
   isLogOnlyMode,
+  normalizeActionMode,
 } from '../../src/shared/utils/action-mode.util.js';
-import { resolveModerationActionTaken } from '../../src/services/scam-detection.service.js';
+import { shouldApplyTimeout } from '../../src/services/scam-detection.service.js';
 
 describe('action-mode.util', () => {
-  it('maps preset modes to combinable flags', () => {
+  it('maps preset modes to delete/ban flags only', () => {
     expect(getActionFlags(0)).toBe(ActionFlag.DELETE | ActionFlag.BAN);
     expect(getActionFlags(1)).toBe(ActionFlag.DELETE);
     expect(getActionFlags(2)).toBe(0);
-    expect(getActionFlags(3)).toBe(ActionFlag.DELETE | ActionFlag.TIMEOUT);
-    expect(getActionFlags(4)).toBe(ActionFlag.DELETE | ActionFlag.BAN | ActionFlag.TIMEOUT);
+  });
+
+  it('normalizes legacy action modes 3 and 4', () => {
+    expect(normalizeActionMode(3)).toBe(1);
+    expect(normalizeActionMode(4)).toBe(0);
   });
 
   it('checks included actions per mode', () => {
-    expect(actionModeIncludes(3, ActionFlag.TIMEOUT)).toBe(true);
-    expect(actionModeIncludes(3, ActionFlag.BAN)).toBe(false);
-    expect(actionModeIncludes(4, ActionFlag.BAN)).toBe(true);
-    expect(actionModeIncludes(4, ActionFlag.TIMEOUT)).toBe(true);
+    expect(actionModeIncludes(0, ActionFlag.BAN)).toBe(true);
+    expect(actionModeIncludes(1, ActionFlag.BAN)).toBe(false);
     expect(isLogOnlyMode(2)).toBe(true);
-    expect(isLogOnlyMode(1)).toBe(false);
   });
 
-  it('formats mode labels and flag descriptions', () => {
-    expect(formatActionMode(4)).toContain('timeout, then ban');
-    expect(describeActionModeFlags(4)).toBe('delete + ban + timeout + log');
+  it('formats mode labels', () => {
+    expect(formatActionMode(1)).toContain('Delete + log');
+    expect(describeActionModeFlags(0)).toBe('delete + ban + log');
     expect(describeActionModeFlags(2)).toBe('log');
   });
 });
 
-describe('resolveModerationActionTaken', () => {
-  it('reports combined ban and timeout outcomes', () => {
-    expect(resolveModerationActionTaken(true, true, true, true)).toBe('timeout+ban');
-    expect(resolveModerationActionTaken(true, true, false, true)).toBe('timeout+ban_partial');
-    expect(resolveModerationActionTaken(true, true, true, false)).toBe('timeout_partial+ban');
-    expect(resolveModerationActionTaken(true, false, true, null)).toBe('ban');
-    expect(resolveModerationActionTaken(false, true, null, true)).toBe('timeout');
+describe('shouldApplyTimeout', () => {
+  it('applies timeout when enabled and ban is not used', () => {
+    expect(shouldApplyTimeout(true, false)).toBe(true);
+    expect(shouldApplyTimeout(true, true)).toBe(false);
+    expect(shouldApplyTimeout(false, false)).toBe(false);
   });
 });

@@ -2,9 +2,9 @@
 
 ## 0.2.0 — Unreleased
 
-- Action modes `0`–`4` as combinable presets (delete, ban, timeout)
-- Mode `4`: timeout, then ban on high-confidence detections (timeout must run first)
-- `/config timeout-duration` for high-confidence timeout length
+- Action modes simplified to `0`–`2` (delete/ban presets; logging always recorded)
+- Timeout decoupled from action mode — `/config timeout` with enabled + duration per guild
+- Removed mode-specific timeout/quarantine and redundant ban+timeout combo
 
 ## 0.1.0 — 2026-08-15
 

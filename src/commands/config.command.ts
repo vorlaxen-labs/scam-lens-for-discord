@@ -50,23 +50,25 @@ const ConfigCommand: BotCommand = {
         .addIntegerOption((option) =>
           option
             .setName('mode')
-            .setDescription('0=ban, 1=delete+log, 2=log only, 3=timeout, 4=timeout+ban')
+            .setDescription('0=delete+ban, 1=delete+log, 2=log only')
             .setMinValue(0)
-            .setMaxValue(4)
+            .setMaxValue(2)
             .setRequired(true),
         ),
     )
     .addSubcommand((sub) =>
       sub
-        .setName('timeout-duration')
-        .setDescription('Set high-confidence timeout duration (seconds)')
+        .setName('timeout')
+        .setDescription('Configure member timeout on scam detections (all action modes)')
+        .addBooleanOption((option) =>
+          option.setName('enabled').setDescription('Enable timeout on detections'),
+        )
         .addIntegerOption((option) =>
           option
-            .setName('seconds')
+            .setName('duration')
             .setDescription('Timeout duration in seconds (60-604800)')
             .setMinValue(60)
-            .setMaxValue(604_800)
-            .setRequired(true),
+            .setMaxValue(604_800),
         ),
     )
     .addSubcommand((sub) =>
@@ -83,21 +85,6 @@ const ConfigCommand: BotCommand = {
         .setDescription('Skip scanning messages from bots')
         .addBooleanOption((option) =>
           option.setName('value').setDescription('Skip bots').setRequired(true),
-        ),
-    )
-    .addSubcommand((sub) =>
-      sub
-        .setName('quarantine')
-        .setDescription('Configure fuzzy pHash quarantine (timeout)')
-        .addBooleanOption((option) =>
-          option.setName('enabled').setDescription('Enable fuzzy quarantine'),
-        )
-        .addIntegerOption((option) =>
-          option
-            .setName('duration')
-            .setDescription('Quarantine duration in seconds (60-604800)')
-            .setMinValue(60)
-            .setMaxValue(604_800),
         ),
     )
     .addSubcommand((sub) =>
@@ -172,13 +159,40 @@ const ConfigCommand: BotCommand = {
       return;
     }
 
-    if (subcommand === 'timeout-duration') {
-      const seconds = interaction.options.getInteger('seconds', true);
-      const previous = settings.timeoutDurationSeconds;
-      settings.timeoutDurationSeconds = seconds;
+    if (subcommand === 'timeout') {
+      const enabled = interaction.options.getBoolean('enabled');
+      const duration = interaction.options.getInteger('duration');
+      const changes: string[] = [];
+
+      if (enabled !== null) {
+        settings.timeoutEnabled = enabled;
+        changes.push(`Enabled: ${enabled ? 'yes' : 'no'}`);
+      }
+      if (duration !== null) {
+        settings.timeoutDurationSeconds = duration;
+        changes.push(`Duration: ${duration}s`);
+      }
+
+      if (changes.length === 0) {
+        await interaction.reply({
+          embeds: [
+            EmbedBuilder.config(
+              'Timeout',
+              [
+                `Enabled: ${settings.timeoutEnabled ? 'yes' : 'no'}`,
+                `Duration: ${settings.timeoutDurationSeconds}s`,
+                'Applies on every detection except when a ban is issued.',
+              ].join('\n'),
+            ),
+          ],
+          ephemeral: true,
+        });
+        return;
+      }
+
       services.guildSettingsService.update(settings);
       await interaction.reply({
-        embeds: [EmbedBuilder.config('Timeout duration', `${previous}s → ${seconds}s`)],
+        embeds: [EmbedBuilder.config('Timeout', changes.join('\n'))],
         ephemeral: true,
       });
       return;
@@ -201,44 +215,6 @@ const ConfigCommand: BotCommand = {
       services.guildSettingsService.update(settings);
       await interaction.reply({
         embeds: [EmbedBuilder.config('Skip bots', value ? 'On' : 'Off')],
-        ephemeral: true,
-      });
-      return;
-    }
-
-    if (subcommand === 'quarantine') {
-      const enabled = interaction.options.getBoolean('enabled');
-      const duration = interaction.options.getInteger('duration');
-      const changes: string[] = [];
-
-      if (enabled !== null) {
-        settings.quarantineFuzzyImages = enabled;
-        changes.push(`Enabled: ${enabled ? 'yes' : 'no'}`);
-      }
-      if (duration !== null) {
-        settings.quarantineDurationSeconds = duration;
-        changes.push(`Duration: ${duration}s`);
-      }
-
-      if (changes.length === 0) {
-        await interaction.reply({
-          embeds: [
-            EmbedBuilder.config(
-              'Quarantine',
-              [
-                `Enabled: ${settings.quarantineFuzzyImages ? 'yes' : 'no'}`,
-                `Duration: ${settings.quarantineDurationSeconds}s`,
-              ].join('\n'),
-            ),
-          ],
-          ephemeral: true,
-        });
-        return;
-      }
-
-      services.guildSettingsService.update(settings);
-      await interaction.reply({
-        embeds: [EmbedBuilder.config('Quarantine', changes.join('\n'))],
         ephemeral: true,
       });
       return;
@@ -338,10 +314,9 @@ const ConfigCommand: BotCommand = {
             `Threshold: ${settings.phashThreshold}`,
             `Strict: ${settings.phashStrictThreshold}`,
             `Action: ${formatActionMode(settings.actionMode)}`,
-            `Timeout (high confidence): ${settings.timeoutDurationSeconds}s`,
+            `Timeout: ${settings.timeoutEnabled ? 'yes' : 'no'} (${settings.timeoutDurationSeconds}s)`,
             `Enabled: ${settings.enabled ? 'yes' : 'no'}`,
             `Skip bots: ${settings.skipBots ? 'yes' : 'no'}`,
-            `Quarantine fuzzy: ${settings.quarantineFuzzyImages ? 'yes' : 'no'} (${settings.quarantineDurationSeconds}s)`,
             `Guild blocklist: ${guildBlocklistCount} custom domains`,
             `Allowlist: ${allowlistCount} domains`,
             `Guild log: ${guildLog}`,

@@ -17,7 +17,8 @@ function createSettings(overrides: Partial<GuildSettings> = {}): GuildSettings {
     skipWebhooks: false,
     skipBots: true,
     timeoutDurationSeconds: 3600,
-    quarantineFuzzyImages: true,
+    timeoutEnabled: false,
+    quarantineFuzzyImages: false,
     quarantineDurationSeconds: 900,
     ...overrides,
   };
@@ -118,20 +119,15 @@ describe('ScamDetectionService.handleDetection', () => {
     );
   });
 
-  it('applies timeout before ban in mode 4', async () => {
-    settings.actionMode = 4;
-    const callOrder: string[] = [];
+  it('applies timeout on detections when enabled and ban is not used', async () => {
+    settings.timeoutEnabled = true;
+    const timeoutFn = vi.fn(async () => undefined);
     const botPermissions = { has: () => true };
 
     const member = {
       bannable: true,
       moderatable: true,
-      timeout: vi.fn(async () => {
-        callOrder.push('timeout');
-      }),
-      ban: vi.fn(async () => {
-        callOrder.push('ban');
-      }),
+      timeout: timeoutFn,
       guild: {
         members: {
           me: { permissions: botPermissions },
@@ -147,10 +143,51 @@ describe('ScamDetectionService.handleDetection', () => {
       },
     };
 
-    const message = createMockMessage({
-      guild,
-      member,
+    const message = createMockMessage({ guild, member });
+    Object.assign(message.channel as object, { guild });
+
+    await service.handleDetection(message, {
+      domainMatches: [{ domain: 'login.evil.com', blockedDomain: 'evil.com', source: 'global' }],
+      imageMatches: [],
     });
+
+    expect(timeoutFn).toHaveBeenCalled();
+    expect(recordMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionTaken: 'delete+timeout',
+        actionResult: 'delete:success,timeout:success',
+      }),
+    );
+  });
+
+  it('skips timeout when high-confidence ban is issued', async () => {
+    settings.actionMode = 0;
+    settings.timeoutEnabled = true;
+    const timeoutFn = vi.fn(async () => undefined);
+    const banFn = vi.fn(async () => undefined);
+    const botPermissions = { has: () => true };
+
+    const member = {
+      bannable: true,
+      moderatable: true,
+      timeout: timeoutFn,
+      ban: banFn,
+      guild: {
+        members: {
+          me: { permissions: botPermissions },
+        },
+      },
+    };
+
+    const guild = {
+      id: 'guild-1',
+      members: {
+        fetch: vi.fn(async () => member),
+        me: { permissions: botPermissions },
+      },
+    };
+
+    const message = createMockMessage({ guild, member });
     Object.assign(message.channel as object, { guild });
 
     await service.handleDetection(message, {
@@ -158,11 +195,11 @@ describe('ScamDetectionService.handleDetection', () => {
       imageMatches: [],
     });
 
-    expect(callOrder).toEqual(['timeout', 'ban']);
+    expect(banFn).toHaveBeenCalled();
+    expect(timeoutFn).not.toHaveBeenCalled();
     expect(recordMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        actionTaken: 'timeout+ban',
-        actionResult: 'delete:success,timeout:success,ban:success',
+        actionTaken: 'ban',
       }),
     );
   });

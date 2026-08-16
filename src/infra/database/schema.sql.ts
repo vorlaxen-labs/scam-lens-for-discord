@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS guild_settings (
   skip_webhooks INTEGER NOT NULL DEFAULT 0,
   skip_bots INTEGER NOT NULL DEFAULT 1,
   timeout_duration_seconds INTEGER NOT NULL DEFAULT 3600,
+  timeout_enabled INTEGER NOT NULL DEFAULT 0,
   quarantine_fuzzy_images INTEGER NOT NULL DEFAULT 1,
   quarantine_duration_seconds INTEGER NOT NULL DEFAULT 900,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),

@@ -36,13 +36,8 @@ function formatAction(action: string): string {
     ban_partial: 'Ban failed (partial)',
     timeout: 'User timed out',
     timeout_partial: 'Timeout failed (partial)',
-    'ban+timeout': 'User timed out, then banned',
-    'timeout+ban': 'User timed out, then banned',
-    'timeout+ban_partial': 'User timed out, ban failed (partial)',
-    'timeout_partial+ban': 'Timeout failed, user banned (partial)',
-    'ban+timeout_partial': 'User timed out, ban failed (partial)',
-    'ban_partial+timeout': 'Timeout failed, user banned (partial)',
-    quarantine: 'User quarantined (timeout)',
+    'delete+timeout': 'Message deleted and user timed out',
+    quarantine: 'User timed out',
   };
   return labels[action] ?? action;
 }
@@ -220,7 +215,7 @@ export class EmbedBuilder {
           'Open-source Discord protection against **scam images** and **malicious domains**.',
           'Every message is scanned for known scam visuals (pHash) and blocklisted URLs, then your server\'s action mode is applied.',
           'Auto-ban only triggers on high-confidence signals — guild domain, strict pHash, or dual detection.',
-          'Global seed domain alone deletes + logs. Fuzzy pHash may trigger quarantine (timeout).',
+          'Global seed domain alone deletes + logs. Optional timeout applies on every detection when enabled.',
         ].join('\n\n'),
       )
       .setColor(COLORS.neutral)
@@ -240,10 +235,8 @@ export class EmbedBuilder {
             '`0` Delete + auto-ban (high confidence)',
             '`1` Delete + log *(default)*',
             '`2` Log only *(new servers)*',
-            '`3` Delete + timeout (high confidence)',
-            '`4` Delete + timeout, then ban (high confidence)',
-            'Logging is always recorded. Modes combine delete, ban, and timeout.',
-            'Configure with `/config action` · timeout length via `/config timeout-duration`',
+            'Timeout is separate — enable with `/config timeout` (applies to all modes except ban).',
+            'Configure action with `/config action`',
           ].join('\n'),
           inline: false,
         },
@@ -271,7 +264,7 @@ export class EmbedBuilder {
             '`/about` · `/get-hash` · `/add-scam` · `/remove-scam`',
             '`/add-domain` · `/remove-domain` · `/list-domains`',
             '`/add-allow-domain` · `/remove-allow-domain` · `/list-allow-domains`',
-            '`/config` — log channel, thresholds, action, quarantine, restore, status',
+            '`/config` — log channel, thresholds, action, timeout, restore, status',
           ].join('\n'),
           inline: false,
         },

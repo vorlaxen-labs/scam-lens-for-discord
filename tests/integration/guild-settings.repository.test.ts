@@ -25,8 +25,9 @@ describe('GuildSettingsRepository', () => {
       exemptRoleIds: ['role-1'],
       skipWebhooks: false,
       skipBots: true,
+      timeoutEnabled: true,
       timeoutDurationSeconds: 600,
-      quarantineFuzzyImages: true,
+      quarantineFuzzyImages: false,
       quarantineDurationSeconds: 900,
     });
 
@@ -40,6 +41,7 @@ describe('GuildSettingsRepository', () => {
 
     expect(updated.phashThreshold).toBe(10);
     expect(repo.findByGuildId('guild-1')?.logChannelId).toBe('channel-2');
+    expect(repo.findByGuildId('guild-1')?.timeoutEnabled).toBe(true);
     expect(repo.findByGuildId('missing')).toBeNull();
   });
 });

@@ -1,21 +1,25 @@
 export const ActionFlag = {
   DELETE: 1,
   BAN: 2,
-  TIMEOUT: 4,
 } as const;
 
-export type ActionMode = 0 | 1 | 2 | 3 | 4;
+export type ActionMode = 0 | 1 | 2;
 
 const ACTION_MODE_FLAGS: Record<ActionMode, number> = {
   0: ActionFlag.DELETE | ActionFlag.BAN,
   1: ActionFlag.DELETE,
   2: 0,
-  3: ActionFlag.DELETE | ActionFlag.TIMEOUT,
-  4: ActionFlag.DELETE | ActionFlag.BAN | ActionFlag.TIMEOUT,
 };
 
 export function isActionMode(value: number): value is ActionMode {
-  return value >= 0 && value <= 4 && Number.isInteger(value);
+  return value >= 0 && value <= 2 && Number.isInteger(value);
+}
+
+export function normalizeActionMode(value: number): ActionMode {
+  if (isActionMode(value)) return value;
+  if (value === 3) return 1;
+  if (value === 4) return 0;
+  return 1;
 }
 
 export function getActionFlags(mode: ActionMode): number {
@@ -31,19 +35,14 @@ export function isLogOnlyMode(mode: ActionMode): boolean {
 }
 
 export function formatActionMode(mode: number): string {
+  const normalized = normalizeActionMode(mode);
   const labels: Record<ActionMode, string> = {
     0: '0 — Delete + ban (high confidence)',
     1: '1 — Delete + log',
     2: '2 — Log only',
-    3: '3 — Delete + timeout (high confidence)',
-    4: '4 — Delete + timeout, then ban (high confidence)',
   };
 
-  if (isActionMode(mode)) {
-    return labels[mode];
-  }
-
-  return String(mode);
+  return labels[normalized];
 }
 
 export function describeActionModeFlags(mode: ActionMode): string {
@@ -52,7 +51,6 @@ export function describeActionModeFlags(mode: ActionMode): string {
   const parts: string[] = [];
   if (actionModeIncludes(mode, ActionFlag.DELETE)) parts.push('delete');
   if (actionModeIncludes(mode, ActionFlag.BAN)) parts.push('ban');
-  if (actionModeIncludes(mode, ActionFlag.TIMEOUT)) parts.push('timeout');
   parts.push('log');
   return parts.join(' + ');
 }
