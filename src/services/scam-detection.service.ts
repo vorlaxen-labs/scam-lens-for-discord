@@ -9,7 +9,7 @@ import {
   buildDetectionType,
   buildMatchedValue,
   buildMetadataSnapshot,
-} from './detection-log.service.js';
+} from './detection-log.helpers.js';
 import type { DomainMatch, GuildSettings, ImageMatch } from '../shared/types/index.js';
 import { logger } from '../infra/logger/index.js';
 

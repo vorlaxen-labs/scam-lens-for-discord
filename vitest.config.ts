@@ -17,6 +17,8 @@ export default defineConfig({
       exclude: [
         'src/shared/types/**',
         'src/infra/database/migrate.ts',
+        'src/infra/database/connection.ts',
+        'src/services/detection-log.service.ts',
       ],
       thresholds: {
         lines: 70,

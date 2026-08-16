@@ -19,4 +19,22 @@ describe('BlockedDomainRepository partial unique indexes', () => {
     repo.upsertGlobal('evil.com', 'seed');
     expect(repo.listGlobalDomains()).toEqual(['evil.com']);
   });
+
+  it('manages guild domains and stale global cleanup', () => {
+    const repo = new BlockedDomainRepository(db);
+    repo.upsertGlobal('seed.com', 'seed');
+    repo.upsertGlobal('stale.com', 'seed');
+    repo.upsertGuild('guild-1', 'guild.evil', 'admin-1');
+
+    expect(repo.listGuildDomains('guild-1')).toEqual(['guild.evil']);
+    expect(repo.listGuildDomainRecords('guild-1')[0]).toMatchObject({
+      domain: 'guild.evil',
+      addedBy: 'admin-1',
+    });
+
+    expect(repo.removeGuildDomain('guild-1', 'guild.evil')).toBe(true);
+    expect(repo.removeGuildDomain('guild-1', 'guild.evil')).toBe(false);
+    expect(repo.removeStaleGlobalDomains(new Set(['seed.com']))).toBe(1);
+    expect(repo.listGlobalDomains()).toEqual(['seed.com']);
+  });
 });

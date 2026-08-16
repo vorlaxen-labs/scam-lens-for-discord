@@ -3,7 +3,7 @@ import {
   buildDetectionType,
   buildMatchedValue,
   buildMetadataSnapshot,
-} from '../../src/services/detection-log.service.js';
+} from '../../src/services/detection-log.helpers.js';
 
 describe('detection-log helpers', () => {
   it('builds detection types', () => {
