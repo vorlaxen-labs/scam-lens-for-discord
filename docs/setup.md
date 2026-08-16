@@ -50,7 +50,7 @@ Action modes combine capabilities:
 | `1` | Delete + log | — |
 | `2` | Log only | — |
 | `3` | Delete + log | Timeout |
-| `4` | Delete + log | Ban + timeout |
+| `4` | Delete + log | Timeout, then ban |
 
 Use `/config timeout-duration` for high-confidence timeout length. Fuzzy pHash quarantine is separate (`/config quarantine`).
 

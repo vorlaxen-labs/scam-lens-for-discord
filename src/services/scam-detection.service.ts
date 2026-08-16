@@ -99,10 +99,10 @@ export function resolveModerationActionTaken(
   timeoutSucceeded: boolean | null,
 ): string {
   if (shouldBan && shouldTimeout) {
-    if (banSucceeded && timeoutSucceeded) return 'ban+timeout';
-    if (banSucceeded) return 'ban+timeout_partial';
-    if (timeoutSucceeded) return 'ban_partial+timeout';
-    return 'ban_partial';
+    if (timeoutSucceeded && banSucceeded) return 'timeout+ban';
+    if (timeoutSucceeded) return 'timeout+ban_partial';
+    if (banSucceeded) return 'timeout_partial+ban';
+    return 'timeout_partial';
   }
 
   if (shouldBan) {
@@ -183,14 +183,15 @@ export class ScamDetectionService {
       let banSucceeded: boolean | null = null;
       let timeoutSucceeded: boolean | null = null;
 
-      if (shouldBan) {
-        banSucceeded = await this.tryBanMember(message);
-        actionResults.push(banSucceeded ? 'ban:success' : 'ban:failed');
-      }
-
+      // Timeout must run before ban — a banned member is no longer in the guild.
       if (shouldTimeout) {
         timeoutSucceeded = await this.tryTimeoutMember(message, settings.timeoutDurationSeconds);
         actionResults.push(timeoutSucceeded ? 'timeout:success' : 'timeout:failed');
+      }
+
+      if (shouldBan) {
+        banSucceeded = await this.tryBanMember(message);
+        actionResults.push(banSucceeded ? 'ban:success' : 'ban:failed');
       }
 
       actionTaken = resolveModerationActionTaken(

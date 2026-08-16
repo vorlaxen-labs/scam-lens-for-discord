@@ -45,7 +45,7 @@ Single process, multiple guilds. Running multiple bot instances against one SQLi
 | `1` | Delete + log | — *(recommended default)* |
 | `2` | Log only | — *(new servers)* |
 | `3` | Delete + log | Timeout |
-| `4` | Delete + log | Ban + timeout |
+| `4` | Delete + log | Timeout, then ban |
 
 High-confidence timeout length: `/config timeout-duration`. Fuzzy quarantine: `/config quarantine`.
 

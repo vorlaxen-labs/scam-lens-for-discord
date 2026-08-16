@@ -9,7 +9,7 @@ New guilds default to **action mode 2** (log only). Before enabling delete or ba
 3. Review logs in the channel
 4. Review logs in the channel
 5. `/config action mode:1` for delete + log
-6. Enable mode `0` (ban), `3` (timeout), or `4` (ban + timeout) only when you trust high-confidence rules
+6. Enable mode `0` (ban), `3` (timeout), or `4` (timeout, then ban) only when you trust high-confidence rules
 7. Set high-confidence timeout length with `/config timeout-duration`
 
 **Auto-ban / auto-timeout never triggers on fuzzy pHash alone.**

@@ -36,7 +36,7 @@ export function formatActionMode(mode: number): string {
     1: '1 — Delete + log',
     2: '2 — Log only',
     3: '3 — Delete + timeout (high confidence)',
-    4: '4 — Delete + ban + timeout (high confidence)',
+    4: '4 — Delete + timeout, then ban (high confidence)',
   };
 
   if (isActionMode(mode)) {

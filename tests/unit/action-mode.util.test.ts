@@ -28,7 +28,7 @@ describe('action-mode.util', () => {
   });
 
   it('formats mode labels and flag descriptions', () => {
-    expect(formatActionMode(4)).toContain('ban + timeout');
+    expect(formatActionMode(4)).toContain('timeout, then ban');
     expect(describeActionModeFlags(4)).toBe('delete + ban + timeout + log');
     expect(describeActionModeFlags(2)).toBe('log');
   });
@@ -36,9 +36,9 @@ describe('action-mode.util', () => {
 
 describe('resolveModerationActionTaken', () => {
   it('reports combined ban and timeout outcomes', () => {
-    expect(resolveModerationActionTaken(true, true, true, true)).toBe('ban+timeout');
-    expect(resolveModerationActionTaken(true, true, true, false)).toBe('ban+timeout_partial');
-    expect(resolveModerationActionTaken(true, true, false, true)).toBe('ban_partial+timeout');
+    expect(resolveModerationActionTaken(true, true, true, true)).toBe('timeout+ban');
+    expect(resolveModerationActionTaken(true, true, false, true)).toBe('timeout+ban_partial');
+    expect(resolveModerationActionTaken(true, true, true, false)).toBe('timeout_partial+ban');
     expect(resolveModerationActionTaken(true, false, true, null)).toBe('ban');
     expect(resolveModerationActionTaken(false, true, null, true)).toBe('timeout');
   });

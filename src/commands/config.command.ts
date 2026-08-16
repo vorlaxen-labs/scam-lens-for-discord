@@ -50,7 +50,7 @@ const ConfigCommand: BotCommand = {
         .addIntegerOption((option) =>
           option
             .setName('mode')
-            .setDescription('0=ban, 1=delete+log, 2=log only, 3=timeout, 4=ban+timeout')
+            .setDescription('0=ban, 1=delete+log, 2=log only, 3=timeout, 4=timeout+ban')
             .setMinValue(0)
             .setMaxValue(4)
             .setRequired(true),

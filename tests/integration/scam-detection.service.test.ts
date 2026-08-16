@@ -117,4 +117,53 @@ describe('ScamDetectionService.handleDetection', () => {
       }),
     );
   });
+
+  it('applies timeout before ban in mode 4', async () => {
+    settings.actionMode = 4;
+    const callOrder: string[] = [];
+    const botPermissions = { has: () => true };
+
+    const member = {
+      bannable: true,
+      moderatable: true,
+      timeout: vi.fn(async () => {
+        callOrder.push('timeout');
+      }),
+      ban: vi.fn(async () => {
+        callOrder.push('ban');
+      }),
+      guild: {
+        members: {
+          me: { permissions: botPermissions },
+        },
+      },
+    };
+
+    const guild = {
+      id: 'guild-1',
+      members: {
+        fetch: vi.fn(async () => member),
+        me: { permissions: botPermissions },
+      },
+    };
+
+    const message = createMockMessage({
+      guild,
+      member,
+    });
+    Object.assign(message.channel as object, { guild });
+
+    await service.handleDetection(message, {
+      domainMatches: [{ domain: 'x.evil.com', blockedDomain: 'evil.com', source: 'guild' }],
+      imageMatches: [],
+    });
+
+    expect(callOrder).toEqual(['timeout', 'ban']);
+    expect(recordMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionTaken: 'timeout+ban',
+        actionResult: 'delete:success,timeout:success,ban:success',
+      }),
+    );
+  });
 });
