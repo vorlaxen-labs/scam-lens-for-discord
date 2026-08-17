@@ -78,6 +78,8 @@ Two supported paths — pick one:
 
 Without this, every redeploy wipes guild settings, logs, and allowlists.
 
+Seed assets (`domains.txt`, reference scam images) live in the Docker image at `/app/seed/` and are **not** stored in the volume. Only the SQLite database and lock file belong in `/app/data`.
+
 Coolify → your resource → **Persistent Storage** → **Add**:
 
 | Field | Value |
@@ -132,7 +134,7 @@ Do not commit `env/.env.production` with real tokens.
 - [ ] Persistent storage mounted at `/app/data`
 - [ ] `DATABASE_PATH=/app/data/scam-lens.db` set
 - [ ] `BOT_TOKEN` and `BOT_CLIENT_ID` set
-- [ ] Deploy → logs show `SQLite database initialized` and `is online`
+- [ ] Deploy → logs show `SQLite database initialized`, `imageCount: 4`, and `referenceImageHashes: 4` in startup
 - [ ] Bot appears online in Discord
 - [ ] Redeploy → guild data still present
 
@@ -199,4 +201,6 @@ For disaster recovery on a new server: deploy fresh, mount empty volume, restore
 | `database is locked` | Multiple replicas or stale container |
 | Bot offline | Invalid `BOT_TOKEN` or missing intents |
 | Domain seed count is 0 | Image build missing `data/text/domains.txt` |
+| `imageCount: 0` on boot | Image build missing `data/images/` — pHash detection disabled |
+| Image posted but no reaction | No matching pHash in DB (seed empty or image not in reference set) |
 | Backup fails | Container not running, or timeout too low for large DB |

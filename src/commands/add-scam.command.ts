@@ -5,6 +5,7 @@ import { refreshRuntimeCaches } from '../infra/bootstrap/create-services.js';
 import type { BotCommand } from '../shared/types/index.js';
 import { EmbedBuilder } from '../shared/embed/embed.builder.js';
 import { ImageFetchError } from '../shared/utils/image-fetch.util.js';
+import { isImageAttachment } from '../shared/utils/image-attachment.util.js';
 import { client } from '../infra/bot/client.js';
 import { validateScamHash } from './get-hash.command.js';
 
@@ -39,7 +40,7 @@ const AddScamCommand: BotCommand = {
 
     let hash = scamHash?.toLowerCase() ?? null;
     if (image) {
-      if (!image.contentType?.startsWith('image/')) {
+      if (!isImageAttachment(image)) {
         await interaction.reply({ content: 'Attachment must be an image.', ephemeral: true });
         return;
       }

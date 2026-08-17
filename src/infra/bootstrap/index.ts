@@ -36,9 +36,16 @@ export async function bootstrap(): Promise<void> {
       project: brandingConfig.projectName,
       author: brandingConfig.author,
       domains: services.domainBlocklistService.getGlobalDomainCount(),
+      referenceImageHashes: services.phashService.getHashCounts().global,
     },
     `${brandingConfig.projectName} starting`,
   );
+
+  if (services.phashService.getHashCounts().global === 0) {
+    logger.warn(
+      'No global pHash reference hashes loaded — image scam detection is disabled until seed images are available',
+    );
+  }
 
   registerSignals(database);
   await client.start(botConfig.token, services);

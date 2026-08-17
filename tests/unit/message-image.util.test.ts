@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { collectMessageImageUrls } from '../../src/shared/utils/message-image.util.js';
 
 function createMessage(partial: {
-  attachments?: Array<{ url: string; contentType: string | null }>;
+  attachments?: Array<{ url: string; contentType: string | null; name?: string | null }>;
   embeds?: Array<{ image?: { url: string }; thumbnail?: { url: string } }>;
 }) {
   return {
@@ -44,6 +44,22 @@ describe('collectMessageImageUrls', () => {
       'https://media.discordapp.net/attachments/1/3/b.webp',
       'https://images-ext-1.discordapp.net/external/abc/thumb.png',
     ]);
+  });
+
+  it('collects image attachments without content type when extension matches', () => {
+    const urls = collectMessageImageUrls(
+      createMessage({
+        attachments: [
+          {
+            url: 'https://cdn.discordapp.com/attachments/1/2/scam.webp',
+            contentType: null,
+            name: 'scam.webp',
+          },
+        ],
+      }),
+    );
+
+    expect(urls).toEqual(['https://cdn.discordapp.com/attachments/1/2/scam.webp']);
   });
 
   it('dedupes urls and skips non-discord hosts', () => {

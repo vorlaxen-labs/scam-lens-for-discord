@@ -6,6 +6,7 @@ import { BlockedDomainRepository } from '../database/repositories/blocked-domain
 import { ScamHashRepository } from '../database/repositories/scam-hash.repository.js';
 import { SeedVersionRepository } from '../database/repositories/detection-log.repository.js';
 import { PhashService } from '../../services/phash.service.js';
+import { resolveSeedDomainsPath, resolveSeedImagesDir } from '../../shared/utils/seed-path.util.js';
 import { logger } from '../logger/index.js';
 
 function normalizeDomain(raw: string): string {
@@ -40,7 +41,7 @@ export async function runSeed(phashService: PhashService): Promise<void> {
   const hashRepo = new ScamHashRepository(db);
   const seedVersionRepo = new SeedVersionRepository(db);
 
-  const domainsPath = path.resolve(process.cwd(), 'data/text/domains.txt');
+  const domainsPath = resolveSeedDomainsPath();
   if (!fs.existsSync(domainsPath)) {
     logger.warn({ domainsPath }, 'domains.txt not found — skipping domain seed');
   } else {
@@ -63,13 +64,17 @@ export async function runSeed(phashService: PhashService): Promise<void> {
     }
   }
 
-  const imagesPath = path.resolve(process.cwd(), 'data/images');
+  const imagesPath = resolveSeedImagesDir();
   if (!fs.existsSync(imagesPath)) {
-    logger.warn({ imagesPath }, 'data/images not found — skipping image seed');
+    logger.warn({ imagesPath }, 'Seed image directory not found — skipping image seed');
     return;
   }
 
-  const imageFiles = fs.readdirSync(imagesPath).filter((file) => /\.(webp|png|jpe?g|gif)$/i.test(file));
+  const imageFiles = fs.readdirSync(imagesPath).filter((file) => /\.(webp|png|jpe?g|gif|avif)$/i.test(file));
+  if (imageFiles.length === 0) {
+    logger.warn({ imagesPath }, 'Seed image directory is empty — image detection disabled');
+    return;
+  }
   for (const file of imageFiles) {
     const filePath = path.join(imagesPath, file);
     const buffer = fs.readFileSync(filePath);

@@ -1,3 +1,5 @@
+import { hasImageExtension } from './image-attachment.util.js';
+
 const ALLOWED_HOSTS = new Set([
   'cdn.discordapp.com',
   'media.discordapp.net',
@@ -10,6 +12,7 @@ const ALLOWED_MIME_TYPES = new Set([
   'image/jpeg',
   'image/webp',
   'image/gif',
+  'image/avif',
 ]);
 
 export const IMAGE_FETCH_LIMITS = {
@@ -28,6 +31,11 @@ export class ImageFetchError extends Error {
   }
 }
 
+export interface FetchDiscordImageOptions {
+  signal?: AbortSignal;
+  authToken?: string;
+}
+
 function isAllowedHost(hostname: string): boolean {
   return ALLOWED_HOSTS.has(hostname.toLowerCase());
 }
@@ -38,6 +46,20 @@ export function isAllowedImageUrl(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+export function isAcceptedImageContentType(contentType: string, url: string): boolean {
+  const normalized = contentType.split(';')[0]?.trim().toLowerCase() ?? '';
+
+  if (ALLOWED_MIME_TYPES.has(normalized)) {
+    return true;
+  }
+
+  if (!normalized || normalized === 'application/octet-stream' || normalized === 'binary/octet-stream') {
+    return hasImageExtension(new URL(url).pathname);
+  }
+
+  return false;
 }
 
 export async function readResponseBodyWithLimit(
@@ -73,7 +95,10 @@ export async function readResponseBodyWithLimit(
   return Buffer.concat(chunks, totalBytes);
 }
 
-export async function fetchDiscordImage(url: string, signal?: AbortSignal): Promise<Buffer> {
+export async function fetchDiscordImage(
+  url: string,
+  options: FetchDiscordImageOptions = {},
+): Promise<Buffer> {
   let currentUrl = url;
   let redirects = 0;
 
@@ -86,13 +111,21 @@ export async function fetchDiscordImage(url: string, signal?: AbortSignal): Prom
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), IMAGE_FETCH_LIMITS.timeoutMs);
     const abortHandler = () => controller.abort();
-    signal?.addEventListener('abort', abortHandler);
+    options.signal?.addEventListener('abort', abortHandler);
 
     try {
+      const headers: Record<string, string> = {
+        'User-Agent': 'ScamLensBot/1.0',
+      };
+
+      if (options.authToken) {
+        headers.Authorization = `Bot ${options.authToken}`;
+      }
+
       const response = await fetch(currentUrl, {
         signal: controller.signal,
         redirect: 'manual',
-        headers: { 'User-Agent': 'ScamLensBot/1.0' },
+        headers,
       });
 
       if (response.status >= 300 && response.status < 400) {
@@ -112,8 +145,8 @@ export async function fetchDiscordImage(url: string, signal?: AbortSignal): Prom
         throw new ImageFetchError(`Image fetch failed with status ${response.status}`);
       }
 
-      const contentType = response.headers.get('content-type')?.split(';')[0]?.trim() ?? '';
-      if (!ALLOWED_MIME_TYPES.has(contentType)) {
+      const contentType = response.headers.get('content-type') ?? '';
+      if (!isAcceptedImageContentType(contentType, currentUrl)) {
         throw new ImageFetchError(`Unsupported image MIME type: ${contentType || 'unknown'}`);
       }
 
@@ -138,7 +171,7 @@ export async function fetchDiscordImage(url: string, signal?: AbortSignal): Prom
       throw error;
     } finally {
       clearTimeout(timeout);
-      signal?.removeEventListener('abort', abortHandler);
+      options.signal?.removeEventListener('abort', abortHandler);
     }
   }
 }

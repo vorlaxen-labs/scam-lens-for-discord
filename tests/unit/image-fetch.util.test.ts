@@ -89,6 +89,59 @@ describe('fetchDiscordImage', () => {
     ).rejects.toThrow('Unsupported image MIME type');
   });
 
+  it('accepts octet-stream responses when the url looks like an image', async () => {
+    const payload = new Uint8Array([9, 8, 7]);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        headers: {
+          get(name: string) {
+            if (name === 'content-type') return 'application/octet-stream';
+            if (name === 'content-length') return String(payload.byteLength);
+            return null;
+          },
+        },
+        body: createStream([payload]),
+      })),
+    );
+
+    const result = await fetchDiscordImage('https://cdn.discordapp.com/attachments/1/2/image.webp');
+    expect(result.equals(Buffer.from(payload))).toBe(true);
+  });
+
+  it('sends bot authorization when an auth token is provided', async () => {
+    const payload = new Uint8Array([1]);
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => ({
+      ok: true,
+      status: 200,
+      headers: {
+        get(name: string) {
+          if (name === 'content-type') return 'image/png';
+          if (name === 'content-length') return String(payload.byteLength);
+          return null;
+        },
+      },
+      body: createStream([payload]),
+    }));
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    await fetchDiscordImage('https://cdn.discordapp.com/attachments/1/2/image.png', {
+      authToken: 'test-token',
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://cdn.discordapp.com/attachments/1/2/image.png',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bot test-token',
+        }),
+      }),
+    );
+  });
+
   it('follows redirects within limit and returns image bytes', async () => {
     const payload = new Uint8Array([9, 8, 7]);
     const fetchMock = vi

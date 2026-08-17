@@ -20,7 +20,7 @@ export class ScamLensClient extends Client {
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMembers,
       ],
-      partials: [Partials.Channel],
+      partials: [Partials.Channel, Partials.Message],
     });
 
     this.on('error', (error) => logger.error({ error }, 'Discord client error'));

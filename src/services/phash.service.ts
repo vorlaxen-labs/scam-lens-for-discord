@@ -1,5 +1,6 @@
 import imghash from 'imghash';
 import sharp from 'sharp';
+import { botConfig } from '../config/index.js';
 import { hammingDistance } from '../shared/utils/hamming.util.js';
 import { fetchDiscordImage, IMAGE_FETCH_LIMITS, ImageFetchError } from '../shared/utils/image-fetch.util.js';
 import type { ScamHashRecord } from '../infra/database/repositories/scam-hash.repository.js';
@@ -58,7 +59,7 @@ export class PhashService {
   }
 
   async computeHashFromUrl(url: string): Promise<string> {
-    const buffer = await fetchDiscordImage(url);
+    const buffer = await fetchDiscordImage(url, { authToken: botConfig.token });
     return this.computeHashFromBuffer(buffer);
   }
 
@@ -95,7 +96,7 @@ export class PhashService {
       return this.matchHash(hash, threshold, guildId);
     } catch (error) {
       if (error instanceof ImageFetchError) {
-        logger.debug({ url, error: error.message }, 'Image fetch skipped');
+        logger.warn({ url, error: error.message }, 'Image fetch failed during scam scan');
         return null;
       }
       throw error;

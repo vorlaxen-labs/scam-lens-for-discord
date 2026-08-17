@@ -1,6 +1,7 @@
 import { SlashCommandBuilder } from 'discord.js';
 import type { BotCommand } from '../shared/types/index.js';
 import { ImageFetchError } from '../shared/utils/image-fetch.util.js';
+import { isImageAttachment } from '../shared/utils/image-attachment.util.js';
 import { client } from '../infra/bot/client.js';
 import { isValidHexHash } from '../shared/utils/hamming.util.js';
 
@@ -16,7 +17,7 @@ const GetHashCommand: BotCommand = {
     ),
   async execute(interaction) {
     const attachment = interaction.options.getAttachment('image', true);
-    if (!attachment.contentType?.startsWith('image/')) {
+    if (!isImageAttachment(attachment)) {
       await interaction.reply({ content: 'Attachment must be an image.', ephemeral: true });
       return;
     }

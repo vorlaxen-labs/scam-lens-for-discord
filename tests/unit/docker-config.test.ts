@@ -18,12 +18,15 @@ describe('docker production config', () => {
     expect(compose).toMatch(/restart:\s*unless-stopped/);
   });
 
-  it('builds a production image with the docker database path and seed data', () => {
+  it('keeps read-only seed assets outside the runtime volume mount', () => {
     const dockerfile = readRepoFile('Dockerfile.prod');
 
+    expect(dockerfile).toMatch(/COPY data\/text \.\/seed\/text/);
+    expect(dockerfile).toMatch(/COPY data\/images \.\/seed\/images/);
+    expect(dockerfile).toMatch(/COPY --from=builder.*\/app\/seed \.\/seed/);
+    expect(dockerfile).not.toMatch(/COPY --from=builder.*\/app\/data\/images/);
     expect(dockerfile).toMatch(/NODE_ENV=production/);
     expect(dockerfile).toMatch(/DATABASE_PATH=\/app\/data\/scam-lens\.db/);
-    expect(dockerfile).toMatch(/COPY --from=builder.*\/app\/data\/text \.\/data\/text/);
     expect(dockerfile).toMatch(/VOLUME \["\/app\/data"\]/);
     expect(dockerfile).toMatch(/node dist\/infra\/bootstrap\/index\.js/);
   });
@@ -44,6 +47,7 @@ describe('docker production config', () => {
     expect(docs).toMatch(/\/app\/data/);
     expect(docs).toMatch(/Coolify native backup/i);
     expect(docs).toMatch(/Replicas.*1/s);
+    expect(docs).toMatch(/imageCount: 0/i);
   });
 });
 

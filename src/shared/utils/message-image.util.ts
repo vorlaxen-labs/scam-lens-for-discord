@@ -1,5 +1,6 @@
 import type { Message } from 'discord.js';
 import { IMAGE_FETCH_LIMITS, isAllowedImageUrl } from './image-fetch.util.js';
+import { isImageAttachment } from './image-attachment.util.js';
 
 export function collectMessageImageUrls(message: Message): string[] {
   const seen = new Set<string>();
@@ -13,7 +14,7 @@ export function collectMessageImageUrls(message: Message): string[] {
   };
 
   for (const attachment of message.attachments.values()) {
-    if (attachment.contentType?.startsWith('image/')) {
+    if (isImageAttachment(attachment)) {
       add(attachment.url);
     }
   }
