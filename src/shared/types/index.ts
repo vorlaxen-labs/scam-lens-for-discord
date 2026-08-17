@@ -143,4 +143,5 @@ export interface Services {
   detectionLogService: import('../../services/detection-log.service.js').DetectionLogService;
   cooldownService: import('../../services/cooldown.service.js').CooldownService;
   messageDedupRepository: import('../../infra/database/repositories/message-dedup.repository.js').MessageDedupRepository;
+  presenceService: import('../../services/presence.service.js').PresenceService;
 }

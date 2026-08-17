@@ -1,0 +1,24 @@
+name: scam-lens-dev
+
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: scam_lens_bot_dev
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - pnpm-store:/pnpm/store
+      - ./data:/app/data
+    env_file:
+      - env/.env.development
+    environment:
+      NODE_ENV: development
+      DATABASE_PATH: /app/data/scam-lens.db
+    command: sh -c "pnpm install --frozen-lockfile && pnpm dev"
+
+volumes:
+  pnpm-store:

@@ -47,6 +47,7 @@ describe('DetectionLogService', () => {
 
     expect(payload.embeds).toHaveLength(1);
     expect(payload.components).toHaveLength(1);
-    expect(payload.components[0]?.components).toHaveLength(3);
+    expect(payload.components[0]?.components).toHaveLength(4);
+    expect(payload.components[0]?.components[0]?.data.label).toBe('Add to Server');
   });
 });

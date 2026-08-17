@@ -10,6 +10,7 @@ import { logger } from '../logger/index.js';
 function registerSignals(database: DatabaseService): void {
   const shutdown = (signal: string) => {
     logger.info({ signal }, 'Shutting down');
+    client.services?.presenceService.stop();
     client.destroy();
     database.close();
     process.exit(0);

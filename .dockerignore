@@ -1,0 +1,37 @@
+# Dependencies & build output
+node_modules
+dist
+coverage
+.pnpm-store
+
+# Git & IDE
+.git
+.gitignore
+.cursor
+.vscode
+.idea
+
+# Env & secrets (inject via Coolify / compose env_file)
+.env
+.env.*
+env/.env.development
+env/.env.production
+!env/.env.example
+
+# Runtime data (mount as volume — never bake into image)
+data/scam-lens.db
+data/scam-lens.db-*
+data/scam-lens.pid
+data/test-scam-lens.db
+
+# Tests & dev-only Docker
+tests
+**/*.test.ts
+Dockerfile.dev
+docker-compose.dev.yml
+
+# Docs & CI (not needed in image)
+docs
+.github
+*.md
+!data/text/SOURCES.md

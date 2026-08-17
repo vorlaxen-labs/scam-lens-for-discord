@@ -1,0 +1,21 @@
+name: scam-lens-prod
+
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    image: scam-lens-bot:latest
+    container_name: scam_lens_bot
+    restart: unless-stopped
+    env_file:
+      - path: env/.env.production
+        required: false
+    environment:
+      NODE_ENV: production
+      DATABASE_PATH: /app/data/scam-lens.db
+    volumes:
+      - scam-lens-data:/app/data
+
+volumes:
+  scam-lens-data:

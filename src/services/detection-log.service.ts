@@ -18,6 +18,7 @@ import type {
   DetectionTechnicalContext,
 } from '../shared/types/index.js';
 import { logger } from '../infra/logger/index.js';
+import { resolveBotInviteUrl } from './application-install.service.js';
 
 export class DetectionLogService {
   constructor(
@@ -156,6 +157,10 @@ export class DetectionLogService {
   buildAboutEmbed(context: AboutEmbedContext) {
     const embed = EmbedBuilder.about(context);
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setLabel('Add to Server')
+        .setStyle(ButtonStyle.Link)
+        .setURL(resolveBotInviteUrl()),
       new ButtonBuilder()
         .setLabel('GitHub')
         .setStyle(ButtonStyle.Link)

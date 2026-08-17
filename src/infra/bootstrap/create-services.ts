@@ -13,6 +13,7 @@ import { DetectionLogService } from '../../services/detection-log.service.js';
 import { GuildSettingsService } from '../../services/guild-settings.service.js';
 import { PhashService } from '../../services/phash.service.js';
 import { ScamDetectionService } from '../../services/scam-detection.service.js';
+import { PresenceService } from '../../services/presence.service.js';
 import type { Services } from '../../shared/types/index.js';
 import type { Client } from 'discord.js';
 
@@ -36,6 +37,11 @@ export function createServices(client: Client): Services {
   const detectionLogService = new DetectionLogService(detectionLogRepository, client);
   const scamDetectionService = new ScamDetectionService(guildSettingsService, detectionLogService);
   const cooldownService = new CooldownService();
+  const presenceService = new PresenceService(client, () => ({
+    guildCount: client.guilds.cache.size,
+    globalDomainCount: domainBlocklistService.getGlobalDomainCount(),
+    globalHashCount: phashService.getHashCounts().global,
+  }));
 
   domainBlocklistService.loadFromDatabase();
   phashService.setHashRecords(scamHashRepository.listAll());
@@ -48,6 +54,7 @@ export function createServices(client: Client): Services {
     detectionLogService,
     cooldownService,
     messageDedupRepository,
+    presenceService,
   };
 }
 

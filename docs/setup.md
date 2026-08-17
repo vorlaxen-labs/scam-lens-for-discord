@@ -11,6 +11,9 @@
 5. **OAuth2 → URL Generator**
    - Scopes: `bot`, `applications.commands`
    - Bot permissions: `Manage Messages`, `Ban Members`, `Moderate Members`, `Send Messages`, `Embed Links`
+6. **Installation**
+   - Under **Install Link**, choose **Discord Provided Link** or **Custom URL** (not **None**)
+   - The bot syncs the invite URL on startup (`INSTALL_SYNC_ENABLED=true` by default) so the profile **Add App** button works
 
 ## 2. Configure environment
 

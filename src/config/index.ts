@@ -44,6 +44,16 @@ export const appConfig = {
   version: appVersion,
 } as const;
 
+export const presenceConfig = {
+  enabled: EnvUtils.bool('PRESENCE_ENABLED', true),
+  rotateIntervalMs: EnvUtils.number('PRESENCE_ROTATE_MS', 45_000),
+} as const;
+
+export const installConfig = {
+  syncEnabled: EnvUtils.bool('INSTALL_SYNC_ENABLED', true),
+  inviteUrl: process.env.BOT_INVITE_URL || null,
+} as const;
+
 export const redisConfig = {
   enabled: EnvUtils.bool('REDIS_ENABLED', false),
   host: EnvUtils.string('REDIS_HOST', '127.0.0.1'),
