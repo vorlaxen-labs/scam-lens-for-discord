@@ -60,7 +60,8 @@ Timeout is **not** tied to action mode. Enable it separately with `/config timeo
 
 | Issue | Fix |
 |-------|-----|
-| Slash commands missing | Wait ~1 min; set `BOT_GUILD_ID` for instant guild sync |
+| Slash commands missing | Wait up to 1 hour for global sync; in dev set `BOT_GUILD_ID` for instant guild sync |
+| Slash commands only in one guild | Remove `BOT_GUILD_ID` from production env — prod must use global deploy |
 | Bot ignores messages | Enable **Message Content Intent** in Developer Portal |
 | No detections | Check `/config status` — ensure `enabled: yes` |
 

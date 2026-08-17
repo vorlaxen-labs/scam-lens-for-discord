@@ -27,26 +27,31 @@ async function putWithRetry(
   throw lastError;
 }
 
+export function shouldUseGuildCommandDeploy(nodeEnv = process.env.NODE_ENV ?? 'development'): boolean {
+  return nodeEnv !== 'production' && Boolean(botConfig.guildId);
+}
+
 export async function deployCommands(client: ScamLensClient): Promise<void> {
   const rest = new REST({ version: '10' }).setToken(botConfig.token);
   const body = getSlashCommands(client);
   const globalRoute = Routes.applicationCommands(botConfig.clientId);
 
-  // Dev: guild-scoped commands (instant). Clear global only after guild succeeds.
-  if (botConfig.guildId) {
-    const guildRoute = Routes.applicationGuildCommands(botConfig.clientId, botConfig.guildId);
+  // Dev only: guild-scoped commands (instant). Clear global only after guild succeeds.
+  if (shouldUseGuildCommandDeploy()) {
+    const guildId = botConfig.guildId!;
+    const guildRoute = Routes.applicationGuildCommands(botConfig.clientId, guildId);
 
     try {
       await putWithRetry(rest, guildRoute, body, 'guild');
       await putWithRetry(rest, globalRoute, [], 'global-clear');
       logger.info(
-        { guildId: botConfig.guildId, count: body.length },
+        { guildId, count: body.length },
         'Guild slash commands deployed (global cleared)',
       );
       return;
     } catch (error) {
       logger.warn(
-        { error, guildId: botConfig.guildId },
+        { error, guildId },
         'Guild deploy failed — keeping existing guild commands, deploying global',
       );
     }
