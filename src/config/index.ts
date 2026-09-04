@@ -54,6 +54,12 @@ export const installConfig = {
   inviteUrl: process.env.BOT_INVITE_URL || null,
 } as const;
 
+export const telemetryConfig = {
+  enabled: EnvUtils.bool('TELEMETRY_ENABLED', true),
+  guildEvents: EnvUtils.bool('TELEMETRY_GUILD_EVENTS', true),
+  commands: EnvUtils.bool('TELEMETRY_COMMANDS', false),
+} as const;
+
 export const redisConfig = {
   enabled: EnvUtils.bool('REDIS_ENABLED', false),
   host: EnvUtils.string('REDIS_HOST', '127.0.0.1'),

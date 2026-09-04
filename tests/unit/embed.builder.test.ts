@@ -92,4 +92,19 @@ describe('EmbedBuilder', () => {
     expect(embed.fields?.find((field) => field.name === 'This Server')?.value).toContain('Enabled');
     expect(embed.footer?.text).toContain('v0.1.0');
   });
+
+  it('formats telemetry embed with event footer', () => {
+    const embed = EmbedBuilder.telemetry({
+      event: 'guild_join',
+      title: 'Bot joined server',
+      fields: [
+        { name: 'Server', value: '**Test** (`123`)', inline: false },
+        { name: 'Members', value: '42', inline: true },
+      ],
+    });
+
+    expect(embed.title).toBe('📡 Bot joined server');
+    expect(embed.fields).toHaveLength(2);
+    expect(embed.footer?.text).toContain('telemetry · guild_join');
+  });
 });

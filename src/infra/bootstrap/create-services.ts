@@ -14,6 +14,7 @@ import { GuildSettingsService } from '../../services/guild-settings.service.js';
 import { PhashService } from '../../services/phash.service.js';
 import { ScamDetectionService } from '../../services/scam-detection.service.js';
 import { PresenceService } from '../../services/presence.service.js';
+import { TelemetryService } from '../../services/telemetry.service.js';
 import type { Services } from '../../shared/types/index.js';
 import type { Client } from 'discord.js';
 
@@ -35,6 +36,7 @@ export function createServices(client: Client): Services {
   );
   const phashService = new PhashService();
   const detectionLogService = new DetectionLogService(detectionLogRepository, client);
+  const telemetryService = new TelemetryService(client);
   const scamDetectionService = new ScamDetectionService(guildSettingsService, detectionLogService);
   const cooldownService = new CooldownService();
   const presenceService = new PresenceService(client, () => ({
@@ -52,6 +54,7 @@ export function createServices(client: Client): Services {
     phashService,
     scamDetectionService,
     detectionLogService,
+    telemetryService,
     cooldownService,
     messageDedupRepository,
     presenceService,

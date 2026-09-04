@@ -33,6 +33,13 @@ export class ScamHashRepository {
       .run(guildId, hash, label, addedBy);
   }
 
+  removeAllGlobalSeed(): number {
+    const result = this.db
+      .prepare(`DELETE FROM scam_hashes WHERE guild_id IS NULL AND source = 'seed'`)
+      .run();
+    return result.changes;
+  }
+
   removeGuildHash(guildId: string, hash: string): boolean {
     const result = this.db
       .prepare('DELETE FROM scam_hashes WHERE guild_id = ? AND hash = ?')

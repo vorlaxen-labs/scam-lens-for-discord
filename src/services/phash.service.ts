@@ -10,6 +10,27 @@ import { logger } from '../infra/logger/index.js';
 // imghash size 8 => 8x8 DCT => 64-bit perceptual hash (16 hex chars)
 const PHASH_SIZE = 8;
 
+/** Primary normalization size; also used for stored reference hashes. */
+export const PHASH_PRIMARY_SIZE = 512;
+
+/** Extra sizes scanned at match time — improves cross-resolution matching. */
+export const PHASH_MATCH_SIZES = [256, PHASH_PRIMARY_SIZE] as const;
+
+export async function simulateDiscordUpload(
+  buffer: Buffer,
+  maxWidth: number,
+  maxHeight: number,
+): Promise<Buffer> {
+  return sharp(buffer, {
+    animated: true,
+    pages: 1,
+    limitInputPixels: IMAGE_FETCH_LIMITS.maxPixels,
+  })
+    .resize(maxWidth, maxHeight, { fit: 'inside', withoutEnlargement: false })
+    .webp({ quality: 75 })
+    .toBuffer();
+}
+
 export class PhashService {
   private hashRecords: ScamHashRecord[] = [];
 
@@ -37,14 +58,15 @@ export class PhashService {
     ).length;
   }
 
-  async computeHashFromBuffer(buffer: Buffer): Promise<string> {
+  async computeHashFromBuffer(buffer: Buffer, normalizeSize = PHASH_PRIMARY_SIZE): Promise<string> {
     try {
       const normalized = await sharp(buffer, {
         animated: true,
         pages: 1,
         limitInputPixels: IMAGE_FETCH_LIMITS.maxPixels,
       })
-        .resize(512, 512, { fit: 'inside', withoutEnlargement: true })
+        .resize(normalizeSize, normalizeSize, { fit: 'inside', withoutEnlargement: false })
+        .greyscale()
         .toBuffer();
 
       const hash = await imghash.hash(normalized, PHASH_SIZE, 'hex');
@@ -58,12 +80,24 @@ export class PhashService {
     }
   }
 
+  async computeMatchHashesFromBuffer(buffer: Buffer): Promise<string[]> {
+    const hashes = await Promise.all(
+      PHASH_MATCH_SIZES.map((size) => this.computeHashFromBuffer(buffer, size)),
+    );
+    return [...new Set(hashes)];
+  }
+
   async computeHashFromUrl(url: string): Promise<string> {
     const buffer = await fetchDiscordImage(url, { authToken: botConfig.token });
     return this.computeHashFromBuffer(buffer);
   }
 
-  matchHash(inputHash: string, threshold: number, guildId: string): ImageMatch | null {
+  matchHash(
+    inputHash: string | readonly string[],
+    threshold: number,
+    guildId: string,
+  ): ImageMatch | null {
+    const inputHashes = typeof inputHash === 'string' ? [inputHash] : inputHash;
     const candidates = this.hashRecords.filter(
       (record) => record.guildId === null || record.guildId === guildId,
     );
@@ -72,10 +106,13 @@ export class PhashService {
 
     for (const record of candidates) {
       try {
-        const distance = hammingDistance(inputHash, record.hash);
+        let distance = Infinity;
+        for (const candidateHash of inputHashes) {
+          distance = Math.min(distance, hammingDistance(candidateHash, record.hash));
+        }
         if (distance <= threshold && (!bestMatch || distance < bestMatch.hammingDistance)) {
           bestMatch = {
-            hash: inputHash,
+            hash: inputHashes[0]!,
             matchedHash: record.hash,
             hammingDistance: distance,
             label: record.label,
@@ -92,8 +129,9 @@ export class PhashService {
 
   async scanUrl(url: string, threshold: number, guildId: string): Promise<ImageMatch | null> {
     try {
-      const hash = await this.computeHashFromUrl(url);
-      return this.matchHash(hash, threshold, guildId);
+      const buffer = await fetchDiscordImage(url, { authToken: botConfig.token });
+      const hashes = await this.computeMatchHashesFromBuffer(buffer);
+      return this.matchHash(hashes, threshold, guildId);
     } catch (error) {
       if (error instanceof ImageFetchError) {
         logger.warn({ url, error: error.message }, 'Image fetch failed during scam scan');

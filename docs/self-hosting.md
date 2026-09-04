@@ -114,6 +114,9 @@ Set in Coolify → **Environment Variables** (mark secrets as encrypted):
 | `NODE_ENV` | yes | `production` |
 | `DATABASE_PATH` | yes | `/app/data/scam-lens.db` |
 | `LOG_CHANNEL_ID` | no | Central log hub channel |
+| `TELEMETRY_ENABLED` | no | Structured telemetry to pino + central channel (default `true`) |
+| `TELEMETRY_GUILD_EVENTS` | no | Post join/leave/ready events to central channel (default `true`) |
+| `TELEMETRY_COMMANDS` | no | Post command use/deny/error to central channel (default `false`) |
 | `BOT_GUILD_ID` | no | **Dev only** — instant guild slash sync. Leave **empty in production** or commands appear in one server only |
 | `OWNER_IDS` | no | Comma-separated Discord user IDs |
 | `GITHUB_REPO_URL` | no | `/about` button link |

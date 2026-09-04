@@ -18,8 +18,18 @@ const InteractionCreateEvent: BotEvent<typeof Events.InteractionCreate> = {
       return;
     }
 
-    const allowed = await PermissionGuard.check(interaction, command);
-    if (!allowed) return;
+    const guardResult = await PermissionGuard.check(interaction, command);
+    if (!guardResult.allowed) {
+      await services.telemetryService.emit('command_denied', {
+        command: command.name,
+        userId: interaction.user.id,
+        username: interaction.user.username,
+        guildId: interaction.guildId,
+        guildName: interaction.guild?.name ?? null,
+        reason: guardResult.reason,
+      });
+      return;
+    }
 
     const cooldownSeconds = command.settings?.cooldownSeconds ?? 0;
     if (cooldownSeconds > 0) {
@@ -39,11 +49,27 @@ const InteractionCreateEvent: BotEvent<typeof Events.InteractionCreate> = {
 
     try {
       await command.execute(interaction);
+      await services.telemetryService.emit('command_used', {
+        command: command.name,
+        userId: interaction.user.id,
+        username: interaction.user.username,
+        guildId: interaction.guildId,
+        guildName: interaction.guild?.name ?? null,
+      });
     } catch (error) {
       logger.error(
         { error, command: command.name, userId: interaction.user.id },
         'Command execution failed',
       );
+
+      await services.telemetryService.emit('command_error', {
+        command: command.name,
+        userId: interaction.user.id,
+        username: interaction.user.username,
+        guildId: interaction.guildId,
+        guildName: interaction.guild?.name ?? null,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
 
       const reply = {
         content: 'Something went wrong while running that command.',

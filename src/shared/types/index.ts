@@ -119,6 +119,26 @@ export interface DetectionEmbedContext {
   trustScore?: number;
 }
 
+export type TelemetryEvent =
+  | 'bot_ready'
+  | 'guild_join'
+  | 'guild_leave'
+  | 'command_used'
+  | 'command_denied'
+  | 'command_error';
+
+export interface TelemetryGuildSummary {
+  id: string;
+  name: string;
+  memberCount: number | null;
+}
+
+export interface TelemetryEmbedContext {
+  event: TelemetryEvent;
+  title: string;
+  fields: Array<{ name: string; value: string; inline?: boolean }>;
+}
+
 export interface AboutEmbedContext {
   version: string;
   globalDomainCount: number;
@@ -144,4 +164,5 @@ export interface Services {
   cooldownService: import('../../services/cooldown.service.js').CooldownService;
   messageDedupRepository: import('../../infra/database/repositories/message-dedup.repository.js').MessageDedupRepository;
   presenceService: import('../../services/presence.service.js').PresenceService;
+  telemetryService: import('../../services/telemetry.service.js').TelemetryService;
 }

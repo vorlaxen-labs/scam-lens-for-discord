@@ -5,7 +5,7 @@ import { getDb } from '../database/connection.js';
 import { BlockedDomainRepository } from '../database/repositories/blocked-domain.repository.js';
 import { ScamHashRepository } from '../database/repositories/scam-hash.repository.js';
 import { SeedVersionRepository } from '../database/repositories/detection-log.repository.js';
-import { PhashService } from '../../services/phash.service.js';
+import { PhashService, simulateDiscordUpload } from '../../services/phash.service.js';
 import { resolveSeedDomainsPath, resolveSeedImagesDir } from '../../shared/utils/seed-path.util.js';
 import { logger } from '../logger/index.js';
 
@@ -75,13 +75,30 @@ export async function runSeed(phashService: PhashService): Promise<void> {
     logger.warn({ imagesPath }, 'Seed image directory is empty — image detection disabled');
     return;
   }
+
+  const removed = hashRepo.removeAllGlobalSeed();
+  let variantCount = 0;
+
   for (const file of imageFiles) {
     const filePath = path.join(imagesPath, file);
     const buffer = fs.readFileSync(filePath);
-    const hash = await phashService.computeHashFromBuffer(buffer);
-    hashRepo.upsertGlobal(hash, file, 'seed');
-    logger.debug({ file, hash }, 'Seeded scam image hash');
+
+    const variants: Array<{ buffer: Buffer; label: string }> = [
+      { buffer, label: file },
+      { buffer: await simulateDiscordUpload(buffer, 1920, 1080), label: `${file}@1080p` },
+      { buffer: await simulateDiscordUpload(buffer, 1280, 720), label: `${file}@720p` },
+    ];
+
+    for (const variant of variants) {
+      const hash = await phashService.computeHashFromBuffer(variant.buffer);
+      hashRepo.upsertGlobal(hash, variant.label, 'seed');
+      variantCount += 1;
+      logger.debug({ file: variant.label, hash }, 'Seeded scam image hash');
+    }
   }
 
-  logger.info({ imageCount: imageFiles.length }, 'Image hash seed complete');
+  logger.info(
+    { imageCount: imageFiles.length, hashCount: variantCount, removedStale: removed },
+    'Image hash seed complete',
+  );
 }

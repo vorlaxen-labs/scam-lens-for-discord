@@ -7,6 +7,7 @@ import type {
   DetectionType,
   DomainMatch,
   ImageMatch,
+  TelemetryEmbedContext,
 } from '../types/index.js';
 import { formatActionMode } from '../utils/action-mode.util.js';
 
@@ -15,6 +16,7 @@ const COLORS = {
   success: 0x57f287,
   neutral: 0x5865f2,
   technical: 0xb91c1c,
+  telemetry: 0x95a5a6,
 } as const;
 
 function formatDetectionType(type: DetectionType): string {
@@ -303,6 +305,21 @@ export class EmbedBuilder {
       .setTitle(title)
       .setDescription(description)
       .setColor(COLORS.neutral)
+      .toJSON();
+  }
+
+  static telemetry(context: TelemetryEmbedContext): APIEmbed {
+    return new DiscordEmbedBuilder()
+      .setTitle(`📡 ${context.title}`)
+      .setColor(COLORS.telemetry)
+      .addFields(
+        context.fields.map((field) => ({
+          name: field.name,
+          value: field.value,
+          inline: field.inline ?? false,
+        })),
+      )
+      .setFooter({ text: `${brandingConfig.footerText} · telemetry · ${context.event}` })
       .toJSON();
   }
 }

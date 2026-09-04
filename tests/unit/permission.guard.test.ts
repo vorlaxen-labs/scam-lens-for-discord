@@ -34,26 +34,26 @@ function createCommand(settings: BotCommand['settings'] = {}): BotCommand {
 describe('PermissionGuard', () => {
   it('rejects commands outside guild when guildOnly', async () => {
     const interaction = createInteraction({ guildId: null });
-    const allowed = await PermissionGuard.check(interaction, createCommand({ guildOnly: true }));
-    expect(allowed).toBe(false);
+    const result = await PermissionGuard.check(interaction, createCommand({ guildOnly: true }));
+    expect(result).toEqual({ allowed: false, reason: 'guild_only' });
     expect(interaction.reply).toHaveBeenCalled();
   });
 
   it('requires manage guild for protected commands', async () => {
     const interaction = createInteraction({ permissions: 0n });
-    const allowed = await PermissionGuard.check(
+    const result = await PermissionGuard.check(
       interaction,
       createCommand({ manageGuildRequired: true }),
     );
-    expect(allowed).toBe(false);
+    expect(result).toEqual({ allowed: false, reason: 'manage_guild' });
   });
 
   it('allows manage guild permission', async () => {
     const interaction = createInteraction({ permissions: PermissionFlagsBits.ManageGuild });
-    const allowed = await PermissionGuard.check(
+    const result = await PermissionGuard.check(
       interaction,
       createCommand({ manageGuildRequired: true }),
     );
-    expect(allowed).toBe(true);
+    expect(result).toEqual({ allowed: true });
   });
 });

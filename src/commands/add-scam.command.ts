@@ -2,9 +2,11 @@ import { SlashCommandBuilder } from 'discord.js';
 import { getDb } from '../infra/database/connection.js';
 import { ScamHashRepository } from '../infra/database/repositories/scam-hash.repository.js';
 import { refreshRuntimeCaches } from '../infra/bootstrap/create-services.js';
+import { simulateDiscordUpload } from '../services/phash.service.js';
+import { botConfig } from '../config/index.js';
 import type { BotCommand } from '../shared/types/index.js';
 import { EmbedBuilder } from '../shared/embed/embed.builder.js';
-import { ImageFetchError } from '../shared/utils/image-fetch.util.js';
+import { fetchDiscordImage, ImageFetchError } from '../shared/utils/image-fetch.util.js';
 import { isImageAttachment } from '../shared/utils/image-attachment.util.js';
 import { client } from '../infra/bot/client.js';
 import { validateScamHash } from './get-hash.command.js';
@@ -39,6 +41,7 @@ const AddScamCommand: BotCommand = {
     }
 
     let hash = scamHash?.toLowerCase() ?? null;
+    let storedHashes: string[] = [];
     if (image) {
       if (!isImageAttachment(image)) {
         await interaction.reply({ content: 'Attachment must be an image.', ephemeral: true });
@@ -46,7 +49,15 @@ const AddScamCommand: BotCommand = {
       }
       await interaction.deferReply({ ephemeral: true });
       try {
-        hash = await client.services!.phashService.computeHashFromUrl(image.url);
+        const phashService = client.services!.phashService;
+        const buffer = await fetchDiscordImage(image.url, { authToken: botConfig.token });
+        hash = await phashService.computeHashFromBuffer(buffer);
+        storedHashes = [hash];
+        const variant720 = await simulateDiscordUpload(buffer, 1280, 720);
+        const hash720 = await phashService.computeHashFromBuffer(variant720);
+        if (hash720 !== hash) {
+          storedHashes.push(hash720);
+        }
       } catch (error) {
         const message =
           error instanceof ImageFetchError
@@ -64,11 +75,19 @@ const AddScamCommand: BotCommand = {
 
     const guildId = interaction.guildId!;
     const repo = new ScamHashRepository(getDb());
-    repo.upsertGuild(guildId, hash!, label, interaction.user.id);
+    const hashesToStore = storedHashes.length > 0 ? storedHashes : [hash!];
+    for (const entryHash of hashesToStore) {
+      repo.upsertGuild(guildId, entryHash, label, interaction.user.id);
+    }
     refreshRuntimeCaches(client.services!);
 
+    const hashSummary =
+      hashesToStore.length > 1
+        ? `\`${hash}\` (+ ${hashesToStore.length - 1} resolution variant${hashesToStore.length > 2 ? 's' : ''})`
+        : `\`${hash}\``;
+
     const reply = {
-      embeds: [EmbedBuilder.success('Hash added', `\`${hash}\``)],
+      embeds: [EmbedBuilder.success('Hash added', hashSummary)],
       ephemeral: true,
     };
 
