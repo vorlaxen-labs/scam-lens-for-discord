@@ -2,7 +2,7 @@
 
 Scam image and domain protection for Discord servers. Open source.
 
-[![CI](https://github.com/vorlaxen/scam-lens-discord-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/vorlaxen/scam-lens-discord-bot/actions/workflows/ci.yml)
+[![CI](https://github.com/vorlaxen-labs/scam-lens-discord-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/vorlaxen/scam-lens-discord-bot/actions/workflows/ci.yml)
 
 ## Quick start (~5 minutes)
 
