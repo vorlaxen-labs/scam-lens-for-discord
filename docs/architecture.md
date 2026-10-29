@@ -19,9 +19,7 @@ Discord Gateway
 
 ## Scale-out note
 
-Running **multiple bot instances** against one SQLite file is unsupported — each instance would diverge. Future scale-out requires **PostgreSQL** as shared storage.
-
-**Redis** is on the roadmap for multi-instance cooldown/cache coordination; it is **not implemented** in the current codebase.
+Running **multiple bot instances** against one SQLite file is unsupported — each instance would diverge. Shared storage for more than one process is not available.
 
 ## Detection flow
 

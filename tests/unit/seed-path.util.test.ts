@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  resolveImageDatasetPath,
   resolveSeedDomainsPath,
   resolveSeedImagesDir,
 } from '../../src/shared/utils/seed-path.util.js';
@@ -44,6 +45,24 @@ describe('seed path resolution', () => {
     process.chdir(tempDir);
     try {
       expect(resolveSeedImagesDir()).toBe(imagesDir);
+    } finally {
+      process.chdir(previousCwd);
+    }
+  });
+
+  it('prefers seed/image-hashes.csv over data/image-hashes.csv', () => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'scam-lens-seed-'));
+    const seedDataset = path.join(tempDir, 'seed/image-hashes.csv');
+    const dataDataset = path.join(tempDir, 'data/image-hashes.csv');
+    fs.mkdirSync(path.dirname(seedDataset), { recursive: true });
+    fs.mkdirSync(path.dirname(dataDataset), { recursive: true });
+    fs.writeFileSync(seedDataset, 'seed\n');
+    fs.writeFileSync(dataDataset, 'data\n');
+
+    const previousCwd = process.cwd();
+    process.chdir(tempDir);
+    try {
+      expect(resolveImageDatasetPath()).toBe(seedDataset);
     } finally {
       process.chdir(previousCwd);
     }

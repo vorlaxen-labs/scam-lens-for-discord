@@ -12,6 +12,7 @@ export function createMockMessage(overrides: {
       url?: string | null;
       title?: string | null;
       description?: string | null;
+      author?: { url?: string | null };
       image?: { url: string };
       thumbnail?: { url: string };
       fields?: Array<{ name: string; value: string }>;

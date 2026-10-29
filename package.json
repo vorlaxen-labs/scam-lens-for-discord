@@ -1,10 +1,31 @@
 {
   "name": "scam-lens-discord-bot",
   "version": "0.1.0",
-  "description": "Discord scam detection bot — pHash images + domain blocklist",
+  "description": "Self-hosted Discord scam and phishing detection bot. Scam images via perceptual hash (pHash) and phishing domains via blocklist.",
+  "keywords": [
+    "discord",
+    "discord-bot",
+    "discord.js",
+    "scam-detection",
+    "phishing",
+    "anti-scam",
+    "moderation",
+    "phash",
+    "sqlite",
+    "self-hosted"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vorlaxen-labs/scam-lens-for-discord.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vorlaxen-labs/scam-lens-for-discord/issues"
+  },
+  "homepage": "https://github.com/vorlaxen-labs/scam-lens-for-discord#readme",
   "type": "module",
-  "author": "Vorlaxen",
+  "author": "Vorlaxen Labs",
   "license": "MIT",
+  "private": true,
   "engines": {
     "node": ">=22.0.0"
   },
@@ -17,13 +38,17 @@
     "dev": "tsx watch src/infra/bootstrap/index.ts",
     "start": "node dist/infra/bootstrap/index.js",
     "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:scenarios": "vitest run tests/scenarios",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:ci": "pnpm typecheck && pnpm test:coverage",
     "lint": "eslint src tests",
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx src/infra/database/migrate.ts",
-    "deploy-commands": "tsx src/scripts/deploy-commands.ts"
+    "deploy-commands": "tsx src/scripts/deploy-commands.ts",
+    "build:image-dataset": "tsx src/scripts/build-image-dataset.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",

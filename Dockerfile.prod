@@ -27,7 +27,7 @@ RUN --mount=type=cache,id=scam-lens-pnpm,target=/pnpm/store \
 COPY tsconfig.json ./
 COPY src ./src
 COPY data/text ./seed/text
-COPY data/images ./seed/images
+COPY data/image-hashes.csv ./seed/image-hashes.csv
 
 RUN pnpm build \
     && pnpm prune --prod

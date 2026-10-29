@@ -1,0 +1,41 @@
+name: Bug report
+description: Incorrect detection, a failed command, or a crash
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not paste `BOT_TOKEN`, database files, or private member data. Security issues go to a [private advisory](https://github.com/vorlaxen-labs/scam-lens-for-discord/security/advisories/new).
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: What you expected, and what the bot did.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: From `/about`, or the git revision.
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: action-mode
+    attributes:
+      label: Action mode
+      description: From `/config status`. `0`, `1`, or `2`.
+      placeholder: "2"
+  - type: input
+    id: node
+    attributes:
+      label: Node.js version
+      placeholder: v22.x
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Commands, a redacted log line, or the operation id (`SL-...`). Leave out tokens.
+    validations:
+      required: true

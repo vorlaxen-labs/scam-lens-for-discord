@@ -1,2 +1,26 @@
 Scam Lens For Discord
-Copyright (c) Vorlaxen — https://vorlaxen.com
+Copyright (c) 2026 Vorlaxen Labs
+https://vorlaxen.com
+
+This product is licensed under the MIT License. See the LICENSE file.
+Branding credit is appreciated and is not a license condition. See BRANDING.md.
+
+This product includes a domain blocklist derived from:
+
+  discord-phishing-links
+  Copyright (c) 2021 nikolaischunk
+  https://github.com/nikolaischunk/discord-phishing-links
+  Upstream file: txt/domain-list.txt
+  Local copy: data/text/domains.txt
+
+That list is included under the MIT License. The copyright notice above
+and the MIT permission notice in that project's LICENSE apply to the
+copied domain list. Update policy and disclaimer: data/text/SOURCES.md.
+
+Perceptual hashes in data/image-hashes.csv are generated from
+maintainer-provided scam screenshots in data/images/. They are part of
+this project and are covered by the copyright and license above.
+
+Runtime dependencies (discord.js, better-sqlite3, and the other packages
+listed in package.json) are not vendored in this repository. Each keeps
+its own license, which is installed with that package.

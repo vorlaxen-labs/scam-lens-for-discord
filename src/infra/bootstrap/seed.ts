@@ -1,12 +1,15 @@
 import fs from 'node:fs';
-import path from 'node:path';
 import crypto from 'node:crypto';
 import { getDb } from '../database/connection.js';
 import { BlockedDomainRepository } from '../database/repositories/blocked-domain.repository.js';
 import { ScamHashRepository } from '../database/repositories/scam-hash.repository.js';
 import { SeedVersionRepository } from '../database/repositories/detection-log.repository.js';
-import { PhashService, simulateDiscordUpload } from '../../services/phash.service.js';
-import { resolveSeedDomainsPath, resolveSeedImagesDir } from '../../shared/utils/seed-path.util.js';
+import {
+  describeImageDatasetDrift,
+  parseImageHashDataset,
+  type ImageHashDatasetRow,
+} from '../../shared/utils/image-dataset.util.js';
+import { resolveImageDatasetPath, resolveSeedDomainsPath, resolveSeedImagesDir } from '../../shared/utils/seed-path.util.js';
 import { logger } from '../logger/index.js';
 
 function normalizeDomain(raw: string): string {
@@ -35,7 +38,28 @@ function hashDomains(domains: string[]): string {
   return crypto.createHash('sha256').update(sorted.join('\n')).digest('hex');
 }
 
-export async function runSeed(phashService: PhashService): Promise<void> {
+export interface AppliedImageHashDataset {
+  imageCount: number;
+  datasetRows: number;
+  removedStale: number;
+}
+
+export function applyImageHashDataset(
+  hashRepo: ScamHashRepository,
+  rows: readonly ImageHashDatasetRow[],
+): AppliedImageHashDataset {
+  const removedStale = hashRepo.removeAllGlobalSeed();
+  for (const row of rows) {
+    hashRepo.upsertGlobal(row.hash, row.label, 'seed');
+  }
+  return {
+    imageCount: new Set(rows.map((row) => row.file)).size,
+    datasetRows: rows.length,
+    removedStale,
+  };
+}
+
+export function runSeed(): void {
   const db = getDb();
   const domainRepo = new BlockedDomainRepository(db);
   const hashRepo = new ScamHashRepository(db);
@@ -64,41 +88,43 @@ export async function runSeed(phashService: PhashService): Promise<void> {
     }
   }
 
+  const datasetPath = resolveImageDatasetPath();
+  if (!fs.existsSync(datasetPath)) {
+    logger.warn(
+      { datasetPath, imageCount: 0 },
+      'Image hash dataset not found — image scam detection disabled. Run pnpm build:image-dataset',
+    );
+    return;
+  }
+
+  const parsed = parseImageHashDataset(fs.readFileSync(datasetPath, 'utf8'));
+  if (!parsed.ok) {
+    logger.error(
+      { datasetPath, reason: parsed.reason },
+      'Image hash dataset rejected — existing seed hashes were left unchanged',
+    );
+    return;
+  }
+
   const imagesPath = resolveSeedImagesDir();
-  if (!fs.existsSync(imagesPath)) {
-    logger.warn({ imagesPath }, 'Seed image directory not found — skipping image seed');
-    return;
-  }
-
-  const imageFiles = fs.readdirSync(imagesPath).filter((file) => /\.(webp|png|jpe?g|gif|avif)$/i.test(file));
-  if (imageFiles.length === 0) {
-    logger.warn({ imagesPath }, 'Seed image directory is empty — image detection disabled');
-    return;
-  }
-
-  const removed = hashRepo.removeAllGlobalSeed();
-  let variantCount = 0;
-
-  for (const file of imageFiles) {
-    const filePath = path.join(imagesPath, file);
-    const buffer = fs.readFileSync(filePath);
-
-    const variants: Array<{ buffer: Buffer; label: string }> = [
-      { buffer, label: file },
-      { buffer: await simulateDiscordUpload(buffer, 1920, 1080), label: `${file}@1080p` },
-      { buffer: await simulateDiscordUpload(buffer, 1280, 720), label: `${file}@720p` },
-    ];
-
-    for (const variant of variants) {
-      const hash = await phashService.computeHashFromBuffer(variant.buffer);
-      hashRepo.upsertGlobal(hash, variant.label, 'seed');
-      variantCount += 1;
-      logger.debug({ file: variant.label, hash }, 'Seeded scam image hash');
+  if (fs.existsSync(imagesPath)) {
+    const drift = describeImageDatasetDrift(parsed.rows, imagesPath);
+    if (drift) {
+      logger.warn(
+        { datasetPath, imagesPath, drift },
+        'Image files differ from the hash dataset. Boot is using the dataset. Run pnpm build:image-dataset',
+      );
     }
   }
 
+  const applied = applyImageHashDataset(hashRepo, parsed.rows);
   logger.info(
-    { imageCount: imageFiles.length, hashCount: variantCount, removedStale: removed },
-    'Image hash seed complete',
+    {
+      imageCount: applied.imageCount,
+      datasetRows: applied.datasetRows,
+      removedStale: applied.removedStale,
+      datasetPath,
+    },
+    'Image hash dataset loaded',
   );
 }

@@ -1,0 +1,20 @@
+name: Feature request
+description: Suggest a change to detection, commands, or self-hosting
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: The moderation or self-hosting case this would cover.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed behavior
+      description: What the bot should do, including what should stay unchanged for existing servers.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered

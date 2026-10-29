@@ -22,7 +22,8 @@ describe('docker production config', () => {
     const dockerfile = readRepoFile('Dockerfile.prod');
 
     expect(dockerfile).toMatch(/COPY data\/text \.\/seed\/text/);
-    expect(dockerfile).toMatch(/COPY data\/images \.\/seed\/images/);
+    expect(dockerfile).toMatch(/COPY data\/image-hashes\.csv \.\/seed\/image-hashes\.csv/);
+    expect(dockerfile).not.toMatch(/COPY data\/images/);
     expect(dockerfile).toMatch(/COPY --from=builder.*\/app\/seed \.\/seed/);
     expect(dockerfile).not.toMatch(/COPY --from=builder.*\/app\/data\/images/);
     expect(dockerfile).toMatch(/NODE_ENV=production/);

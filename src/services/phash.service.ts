@@ -1,35 +1,23 @@
-import imghash from 'imghash';
-import sharp from 'sharp';
 import { botConfig } from '../config/index.js';
 import { hammingDistance } from '../shared/utils/hamming.util.js';
-import { fetchDiscordImage, IMAGE_FETCH_LIMITS, ImageFetchError } from '../shared/utils/image-fetch.util.js';
+import { fetchDiscordImage, ImageFetchError } from '../shared/utils/image-fetch.util.js';
 import type { ScamHashRecord } from '../infra/database/repositories/scam-hash.repository.js';
 import type { ImageMatch } from '../shared/types/index.js';
 import { logger } from '../infra/logger/index.js';
+import {
+  computeImageHash,
+  PHASH_MATCH_SIZES,
+  PHASH_PRIMARY_SIZE,
+  PHASH_SIZE,
+  simulateDiscordUpload,
+} from './phash-compute.js';
 
-// imghash size 8 => 8x8 DCT => 64-bit perceptual hash (16 hex chars)
-const PHASH_SIZE = 8;
-
-/** Primary normalization size; also used for stored reference hashes. */
-export const PHASH_PRIMARY_SIZE = 512;
-
-/** Extra sizes scanned at match time — improves cross-resolution matching. */
-export const PHASH_MATCH_SIZES = [256, PHASH_PRIMARY_SIZE] as const;
-
-export async function simulateDiscordUpload(
-  buffer: Buffer,
-  maxWidth: number,
-  maxHeight: number,
-): Promise<Buffer> {
-  return sharp(buffer, {
-    animated: true,
-    pages: 1,
-    limitInputPixels: IMAGE_FETCH_LIMITS.maxPixels,
-  })
-    .resize(maxWidth, maxHeight, { fit: 'inside', withoutEnlargement: false })
-    .webp({ quality: 75 })
-    .toBuffer();
-}
+export {
+  PHASH_MATCH_SIZES,
+  PHASH_PRIMARY_SIZE,
+  PHASH_SIZE,
+  simulateDiscordUpload,
+};
 
 export class PhashService {
   private hashRecords: ScamHashRecord[] = [];
@@ -59,25 +47,7 @@ export class PhashService {
   }
 
   async computeHashFromBuffer(buffer: Buffer, normalizeSize = PHASH_PRIMARY_SIZE): Promise<string> {
-    try {
-      const normalized = await sharp(buffer, {
-        animated: true,
-        pages: 1,
-        limitInputPixels: IMAGE_FETCH_LIMITS.maxPixels,
-      })
-        .resize(normalizeSize, normalizeSize, { fit: 'inside', withoutEnlargement: false })
-        .greyscale()
-        .toBuffer();
-
-      const hash = await imghash.hash(normalized, PHASH_SIZE, 'hex');
-      return hash.toLowerCase();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Image processing failed';
-      if (message.includes('pixel') || message.includes('Input image')) {
-        throw new ImageFetchError('Image exceeds processing limits');
-      }
-      throw error;
-    }
+    return computeImageHash(buffer, normalizeSize);
   }
 
   async computeMatchHashesFromBuffer(buffer: Buffer): Promise<string[]> {
@@ -141,5 +111,3 @@ export class PhashService {
     }
   }
 }
-
-export { PHASH_SIZE };

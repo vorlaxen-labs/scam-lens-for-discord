@@ -3,6 +3,9 @@ dist/
 coverage/
 .env
 .env.*
+env/.env.development
+env/.env.production
+env/.env.local
 !env/.env.example
 .pnpm-store/
 data/scam-lens.db
@@ -10,4 +13,5 @@ data/scam-lens.db-*
 data/test-scam-lens.db
 data/scam-lens.pid
 *.log
+*.tsbuildinfo
 .DS_Store

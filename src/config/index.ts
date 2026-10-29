@@ -28,16 +28,19 @@ export const databaseConfig = {
 } as const;
 
 export const brandingConfig = {
-  author: 'Vorlaxen',
+  author: 'Vorlaxen Labs',
   authorUrl: 'https://vorlaxen.com',
   projectName: 'Scam Lens For Discord',
-  githubUrl: EnvUtils.string('GITHUB_REPO_URL', 'https://github.com/vorlaxen/scam-lens-discord-bot'),
+  githubUrl: EnvUtils.string(
+    'GITHUB_REPO_URL',
+    'https://github.com/vorlaxen-labs/scam-lens-for-discord',
+  ),
   docsUrl: EnvUtils.string(
     'DOCS_URL',
-    'https://github.com/vorlaxen/scam-lens-discord-bot/blob/main/docs/setup.md',
+    'https://github.com/vorlaxen-labs/scam-lens-for-discord/blob/main/docs/setup.md',
   ),
-  copyright: '© Vorlaxen',
-  footerText: 'Scam Lens by Vorlaxen',
+  copyright: '© Vorlaxen Labs',
+  footerText: 'Scam Lens by Vorlaxen Labs',
 } as const;
 
 export const appConfig = {

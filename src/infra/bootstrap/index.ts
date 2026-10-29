@@ -27,7 +27,7 @@ export async function bootstrap(): Promise<void> {
   database.initialize();
 
   const services = createServices(client);
-  await runSeed(services.phashService);
+  await runSeed();
   refreshRuntimeCaches(services);
   client.services = services;
 

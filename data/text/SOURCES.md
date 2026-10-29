@@ -7,4 +7,4 @@
 
 ## Image seeds
 
-`data/images/` contains maintainer-provided scam screenshot examples for pHash seeding (4 files).
+`data/images/` contains maintainer-provided scam screenshot examples. `pnpm build:image-dataset` writes their pHash rows to `data/image-hashes.csv`. The bot loads that file on boot and does not decode the screenshots again.

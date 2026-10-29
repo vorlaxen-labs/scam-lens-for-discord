@@ -30,3 +30,18 @@ export function resolveSeedImagesDir(): string {
 
   return candidates[0];
 }
+
+export function resolveImageDatasetPath(): string {
+  const candidates = [
+    path.resolve(process.cwd(), 'seed/image-hashes.csv'),
+    path.resolve(process.cwd(), 'data/image-hashes.csv'),
+  ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return candidates[0];
+}

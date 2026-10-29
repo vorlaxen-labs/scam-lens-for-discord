@@ -18,6 +18,9 @@ env/.env.development
 env/.env.production
 !env/.env.example
 
+# Reference screenshots are hashed into data/image-hashes.csv before the image build
+data/images
+
 # Runtime data (mount as volume — never bake into image)
 data/scam-lens.db
 data/scam-lens.db-*

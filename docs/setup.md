@@ -35,7 +35,13 @@ pnpm install
 pnpm dev
 ```
 
-On first start the bot seeds `domains.txt` and `data/images/` into SQLite.
+On first start the bot seeds `domains.txt` and reads `data/image-hashes.csv` into SQLite. It does not re-hash `data/images/` on boot.
+
+When a reference screenshot is added or replaced, rebuild the dataset:
+
+```bash
+pnpm build:image-dataset
+```
 
 ## 4. Configure your server
 
@@ -67,4 +73,4 @@ Timeout is **not** tied to action mode. Enable it separately with `/config timeo
 
 ## Multi-instance warning
 
-Do **not** run multiple bot processes sharing one SQLite file. Scale-out requires PostgreSQL (future migration path — see `docs/architecture.md`).
+Do **not** run multiple bot processes sharing one SQLite file. See [architecture.md](architecture.md).
